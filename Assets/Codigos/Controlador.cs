@@ -11,7 +11,8 @@ using SharpCompress.Common;
 using System;
 using UnityEngine.Networking;
 
-public class Controlador : MonoBehaviour {
+public class Controlador : MonoBehaviour
+{
 
     [DllImport("universal")]
     private static extern int FreeUnjail(int FWVersion);
@@ -33,7 +34,10 @@ public class Controlador : MonoBehaviour {
     //[DllImport("universal", CallingConvention = CallingConvention.Cdecl)]
     //private static extern IntPtr PupDecrypt([MarshalAs(UnmanagedType.LPStr)] string path);
 
-
+    [DllImport("universal")]
+    private static extern int InstallPKG(string path, string name, string imgpath);
+    [DllImport("universal")]
+    private static extern int UnloadPKGModule();
 
 
     public static Controlador instancia;
@@ -82,7 +86,7 @@ public class Controlador : MonoBehaviour {
     public GameObject PanelDescompactador;
     public GameObject PanelSelecionUsuario;
     public AudioSource miAudioSource;
-    
+
     public GameObject PanelCopiando;
     public Slider miSlider2;
     public Text TextPorciento;
@@ -97,7 +101,7 @@ public class Controlador : MonoBehaviour {
     public Font arialChina;
     public Font arialKorea;
     public SonyPS4CommonDialog KeyBoardManagerScr;
-        
+
     public GameObject carpetasPrefab;
     public GameObject carpetasPrefabBlackList;
     public GameObject carpetasPrefabEspecial;
@@ -185,7 +189,7 @@ public class Controlador : MonoBehaviour {
     string CadenaErrorCrearFichero = "The file you tried to create already exists";
 
     public int FW = 0;
-    
+
     public void Awake()
     {
         instancia = this;
@@ -676,7 +680,7 @@ public class Controlador : MonoBehaviour {
                 //FreeUnjail(FW);
             }
         }
-        catch { ;}
+        catch {; }
 
         CrearDirectorio();
 
@@ -709,7 +713,7 @@ public class Controlador : MonoBehaviour {
                     txtTemperatura.text = (((float)Temperature() * 9 / 5) + 32).ToString("n1") + " ºF";
                 }
             }
-            catch { ;}
+            catch {; }
 
             yield return new WaitForSeconds(3);
         }
@@ -814,7 +818,7 @@ public class Controlador : MonoBehaviour {
                     objeto = Instantiate(ficherosPrefab, transform);
                     break;
             }
-            
+
             objeto.GetComponentInChildren<Text>().text = Path.GetFileName(FicherosCreados[i]);
             objeto.transform.GetChild(3).GetComponent<Text>().text = Tamaño(FicherosCreados[i]);
 
@@ -823,7 +827,7 @@ public class Controlador : MonoBehaviour {
         }
 
         scrollRect.verticalNormalizedPosition = 1;
-        
+
         // si hay algo selecionar el 1ro de la lista
         if (ObjetosCreados.Count > 0)
         {
@@ -839,7 +843,7 @@ public class Controlador : MonoBehaviour {
             txtCantidad.text = "1 " + CadenaElemento;
         else
             txtCantidad.text = ObjetosCreados.Count.ToString() + " " + CadenaElementos;
-        
+
         Paso = true;
         ObjetosSelecionados.Clear();
         Multiseleccion = false;
@@ -934,10 +938,10 @@ public class Controlador : MonoBehaviour {
 
                     return;
                 }
-                
+
                 if (!Multiseleccion)
                     ObjetosCaminos.Clear();
-                
+
                 Multiseleccion = true;
                 bool ok = true;
                 for (int i = 0; i < ObjetosSelecionados.Count; i++)
@@ -1011,7 +1015,7 @@ public class Controlador : MonoBehaviour {
                 {
                     contentPanel.anchoredPosition = new Vector2(0, 0);
                 }
-                       
+
                 StartCoroutine(SeguirPasando());
             }
 
@@ -1059,7 +1063,7 @@ public class Controlador : MonoBehaviour {
                 UltimaPos.Clear();
                 UltimaPos.Add(new Vector2(0, 0));
                 UltimaPos.Add(new Vector2(0, 0));
-                
+
                 LOG = "";
                 LimpiarTodo();
                 camino = "/mnt/usb1";
@@ -1114,6 +1118,8 @@ public class Controlador : MonoBehaviour {
 
                 try
                 {
+
+
                     LOG = "";
                     if (Directory.Exists(camino)) // si es una carpeta abrirla
                     {
@@ -1185,17 +1191,17 @@ public class Controlador : MonoBehaviour {
                                     DescompactarAvatar(camino, "");
                                 }
                                 break;
-                            //case ".pup":
-                            //    try
-                            //    {
-                            //        LOG = Marshal.PtrToStringAnsi(PupDecrypt(camino));
-                            //    }
-                            //    catch (System.Exception ex)
-                            //    {
-                            //        LOG = "Error " + ex.Message;
-                            //        SistemaSonidos.instancia.PlayError();
-                            //    }
-                            //    break;
+                                //case ".pup":
+                                //    try
+                                //    {
+                                //        LOG = Marshal.PtrToStringAnsi(PupDecrypt(camino));
+                                //    }
+                                //    catch (System.Exception ex)
+                                //    {
+                                //        LOG = "Error " + ex.Message;
+                                //        SistemaSonidos.instancia.PlayError();
+                                //    }
+                                //    break;
                         }
                     }
                 }
@@ -1219,7 +1225,44 @@ public class Controlador : MonoBehaviour {
                 PanelImagenImagen.sprite = instrucciones;
             }
         }
+        else if (EnImagen)
+        {
+            if ((Input.GetKeyDown(KeyCode.Joystick1Button0) || Input.GetKeyDown(KeyCode.Keypad2)))
+            {
+                if (PanelPKG.activeSelf == true)
+                {
+                    try
+                    {
+                        //pkg item
+                        var pkginfo = PS4_Tools.PKG.SceneRelated.Read_PKG(camino);
+                        try
+                        {
+                            if (File.Exists("/data/" + pkginfo.Content_ID + ".png"))
+                            {
+                                File.Delete("/data/" + pkginfo.Content_ID + ".png");
+                            }
+                            File.WriteAllBytes("/data/" + pkginfo.Content_ID + ".png", pkginfo.Icon);
+                        }
+                        catch (Exception ex)
+                        {
+                            // SendMessageToPS4(ex.Message);
+                        }
+                        string imagepath = "";
 
+                        if (File.Exists("/data/" + pkginfo.Content_ID + ".png"))
+                        {
+                            imagepath = "/data/" + pkginfo.Content_ID + ".png";
+                        }
+                        InstallPKG(camino, pkginfo.PS4_Title, imagepath);
+                    }
+                    catch (Exception ex)
+                    {
+
+                    }
+                }
+            }
+        }
+    
         // mostrar opciones
         if (Input.GetKeyDown(KeyCode.Joystick1Button3) || Input.GetKeyDown(KeyCode.Keypad8))
         {
@@ -1283,7 +1326,7 @@ public class Controlador : MonoBehaviour {
                 PanelOpcionesAvanzadas.SetActive(false);
                 return;
             }
-            
+
             if (EnImagen)
             {
                 LOG = "";
@@ -1291,7 +1334,7 @@ public class Controlador : MonoBehaviour {
                 PanelImagen.gameObject.SetActive(false);
                 PanelPKG.gameObject.SetActive(false);
                 PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Stop();
-                PanelVideo.gameObject.SetActive(false);
+PanelVideo.gameObject.SetActive(false);
                 return;
             }
 
@@ -1317,17 +1360,17 @@ public class Controlador : MonoBehaviour {
                 PanelTeclado.gameObject.SetActive(false);
                 return;
             }
-            
+
             if (!Pegando)
             {
                 if (txtCamino.text != "/")
-                {                
+                {
                     Nivel--;
-                    
+
                     LOG = "";
                     LimpiarTodo();
 
-                    camino = txtCamino.text.Substring(0, txtCamino.text.LastIndexOf(_s_));
+camino = txtCamino.text.Substring(0, txtCamino.text.LastIndexOf(_s_));
                     if (camino.Length <= 1) // para PS4 cambiar por 1, para Win 2
                     {
                         camino += _s_;
@@ -1335,9 +1378,9 @@ public class Controlador : MonoBehaviour {
 
                     CrearDirectorio();
 
-                    Posicion = (int)UltimaPos[Nivel].x;
+Posicion = (int) UltimaPos[Nivel].x;
                     contentPanel.anchoredPosition += new Vector2(0, UltimaPos[Nivel].y);
-                    UltimaPos.RemoveAt(Nivel);
+UltimaPos.RemoveAt(Nivel);
 
                     try
                     {
@@ -1349,7 +1392,7 @@ public class Controlador : MonoBehaviour {
                     {
                         Posicion = 0;
                         contentPanel.anchoredPosition = new Vector2(0, 0);
-                        ObjetosCreados[0].transform.GetChild(0).gameObject.SetActive(true);
+ObjetosCreados[0].transform.GetChild(0).gameObject.SetActive(true);
                         camino = TODOS[0];
                     }
                 }
@@ -1382,51 +1425,109 @@ public class Controlador : MonoBehaviour {
     }
 
     private void LimpiarTodo()
+{
+    for (int i = 0; i < transform.childCount; i++)
     {
-        for (int i = 0; i < transform.childCount; i++)
+        Destroy(transform.GetChild(i).gameObject);
+    }
+
+    ObjetosCreados.Clear();
+    TODOS.Clear();
+    Posicion = 0;
+}
+
+private IEnumerator SeguirPasando()
+{
+    if (Input.GetAxis("joystick1_left_trigger") != 0)
+    {
+        yield return null;
+    }
+    else
+    {
+        yield return new WaitForSeconds(0.15f);
+    }
+
+    Paso = true;
+}
+
+private IEnumerator NoAplicarTema()
+{
+    yield return new WaitForSeconds(0.5f);
+    AplicarTema = false;
+}
+
+private IEnumerator NoAplicarAvatar()
+{
+    yield return new WaitForSeconds(0.5f);
+    AplicarAvatar = false;
+}
+
+private void MostrarImagen()
+{
+    EnImagen = true;
+
+    byte[] bytes = File.ReadAllBytes(camino);
+    Texture2D texture = new Texture2D(0, 0, TextureFormat.RGB24, false);
+    texture.filterMode = FilterMode.Trilinear;
+    texture.LoadImage(bytes);
+    Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.0f, 0.0f), 1.0f);
+
+    float AR = 0;
+    float XX = 0;
+    float YY = 0;
+    if (texture.height >= 1080)
+    {
+        AR = (float)texture.width / (float)texture.height;
+        YY = Mathf.Min(texture.width, 1080);
+        XX = YY * AR;
+
+        if (XX > 1920)
         {
-            Destroy(transform.GetChild(i).gameObject);
+            XX = 1920;
+            YY = 1920 / AR;
         }
-
-        ObjetosCreados.Clear();
-        TODOS.Clear();
-        Posicion = 0;
+    }
+    else
+    {
+        AR = (float)texture.width / (float)texture.height;
+        XX = Mathf.Min(texture.width, 1920);
+        YY = XX / AR;
     }
 
-    private IEnumerator SeguirPasando()
-    {
-        if (Input.GetAxis("joystick1_left_trigger") != 0)
-        {
-            yield return null;
-        }
-        else
-        {
-            yield return new WaitForSeconds(0.15f);
-        }
-        
-        Paso = true;
-    }
+    PanelImagenImagen.transform.rotation = new Quaternion(0, 0, 0, 0);
+    PanelImagenImagen.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2(XX, Mathf.RoundToInt(YY));
+    PanelImagen.gameObject.SetActive(true);
+    PanelImagenImagen.sprite = sprite;
+}
 
-    private IEnumerator NoAplicarTema()
-    {
-        yield return new WaitForSeconds(0.5f);
-        AplicarTema = false;
-    }
+public static Texture2D LoadTextureDXT(byte[] ddsBytes, TextureFormat textureFormat)
+{
+    byte ddsSizeCheck = ddsBytes[4];
+    if (ddsSizeCheck != 124)
+        return null;
 
-    private IEnumerator NoAplicarAvatar()
-    {
-        yield return new WaitForSeconds(0.5f);
-        AplicarAvatar = false;
-    }
+    int height = ddsBytes[13] * 256 + ddsBytes[12];
+    int width = ddsBytes[17] * 256 + ddsBytes[16];
 
-    private void MostrarImagen()
-    {
-        EnImagen = true;
+    int DDS_HEADER_SIZE = 128;
+    byte[] dxtBytes = new byte[ddsBytes.Length - DDS_HEADER_SIZE];
+    System.Buffer.BlockCopy(ddsBytes, DDS_HEADER_SIZE, dxtBytes, 0, ddsBytes.Length - DDS_HEADER_SIZE);
 
+    Texture2D texture = new Texture2D(width, height, textureFormat, false);
+    texture.LoadRawTextureData(dxtBytes);
+    texture.Apply(false);
+
+    return (texture);
+}
+
+private void MostrarImagenDDS()
+{
+    EnImagen = true;
+
+    try
+    {
         byte[] bytes = File.ReadAllBytes(camino);
-        Texture2D texture = new Texture2D(0, 0, TextureFormat.RGB24, false);
-        texture.filterMode = FilterMode.Trilinear;
-        texture.LoadImage(bytes);
+        Texture2D texture = LoadTextureDXT(bytes, TextureFormat.DXT1);
         Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.0f, 0.0f), 1.0f);
 
         float AR = 0;
@@ -1451,575 +1552,468 @@ public class Controlador : MonoBehaviour {
             YY = XX / AR;
         }
 
-        PanelImagenImagen.transform.rotation = new Quaternion(0, 0, 0, 0);
+        PanelImagenImagen.transform.rotation = new Quaternion(-180, 0, 0, 0);
         PanelImagenImagen.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2(XX, Mathf.RoundToInt(YY));
         PanelImagen.gameObject.SetActive(true);
-        PanelImagenImagen.sprite = sprite;        
+        PanelImagenImagen.sprite = sprite;
     }
-
-    public static Texture2D LoadTextureDXT(byte[] ddsBytes, TextureFormat textureFormat)
+    catch (System.Exception ex)
     {
-        byte ddsSizeCheck = ddsBytes[4];
-        if (ddsSizeCheck != 124)
-            return null;
-
-        int height = ddsBytes[13] * 256 + ddsBytes[12];
-        int width = ddsBytes[17] * 256 + ddsBytes[16];
-
-        int DDS_HEADER_SIZE = 128;
-        byte[] dxtBytes = new byte[ddsBytes.Length - DDS_HEADER_SIZE];
-        System.Buffer.BlockCopy(ddsBytes, DDS_HEADER_SIZE, dxtBytes, 0, ddsBytes.Length - DDS_HEADER_SIZE);
-
-        Texture2D texture = new Texture2D(width, height, textureFormat, false);
-        texture.LoadRawTextureData(dxtBytes);
-        texture.Apply(false);
-
-        return (texture);
+        LOG = "Error " + ex.Message;
+        SistemaSonidos.instancia.PlayError();
     }
+}
 
-    private void MostrarImagenDDS()
+private void PlayAudio()
+{
+    StartCoroutine(loadFile(camino));
+}
+
+IEnumerator loadFile(string path)
+{
+    WWW www = new WWW("file://" + path);
+
+    AudioClip myAudioClip = www.GetAudioClip();
+    while (myAudioClip.loadState != AudioDataLoadState.Loaded)
+        yield return www;
+
+    miAudioSource.clip = myAudioClip;
+    miAudioSource.Play();
+}
+
+private void PlayVideo()
+{
+    EnImagen = true;
+    EnVideo = true;
+    PanelVideo.gameObject.SetActive(true);
+    PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Stop();
+
+    try
     {
-        EnImagen = true;
+        StopCoroutine(loadVideo(camino));
+        StartCoroutine(loadVideo(camino));
+    }
+    catch (System.Exception ex)
+    {
+        LOG = ex.Message;
+    }
+}
 
-        try
+IEnumerator loadVideo(string path)
+{
+    PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().url = path;
+    PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Prepare();
+
+    while (!PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().isPrepared)
+        yield return null;
+
+    PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Play();
+}
+
+private void MostrarTexto()
+{
+    EnEditorTexto = true;
+
+    string elTexto = "";
+    PanelEditorTexto2.gameObject.SetActive(true);
+    StreamReader sr = new StreamReader(camino, System.Text.Encoding.GetEncoding("iso-8859-1"));
+
+    try
+    {
+        while (!sr.EndOfStream)
         {
-            byte[] bytes = File.ReadAllBytes(camino);
-            Texture2D texture = LoadTextureDXT(bytes, TextureFormat.DXT1);
-            Sprite sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.0f, 0.0f), 1.0f);
-
-            float AR = 0;
-            float XX = 0;
-            float YY = 0;
-            if (texture.height >= 1080)
-            {
-                AR = (float)texture.width / (float)texture.height;
-                YY = Mathf.Min(texture.width, 1080);
-                XX = YY * AR;
-
-                if (XX > 1920)
-                {
-                    XX = 1920;
-                    YY = 1920 / AR;
-                }
-            }
-            else
-            {
-                AR = (float)texture.width / (float)texture.height;
-                XX = Mathf.Min(texture.width, 1920);
-                YY = XX / AR;
-            }
-
-            PanelImagenImagen.transform.rotation = new Quaternion(-180, 0, 0, 0);
-            PanelImagenImagen.gameObject.GetComponent<RectTransform>().sizeDelta = new Vector2(XX, Mathf.RoundToInt(YY));
-            PanelImagen.gameObject.SetActive(true);
-            PanelImagenImagen.sprite = sprite;
+            elTexto += sr.ReadLine() + "\n";
         }
-        catch (System.Exception ex)
+        sr.Close();
+
+        if (elTexto.Length > 1)
         {
-            LOG = "Error " + ex.Message;
-            SistemaSonidos.instancia.PlayError();
-        }
-    }
-
-    private void PlayAudio()
-    {
-        StartCoroutine(loadFile(camino));
-    }
-
-    IEnumerator loadFile(string path)
-    {
-        WWW www = new WWW("file://" + path);
-
-        AudioClip myAudioClip = www.GetAudioClip();
-        while (myAudioClip.loadState != AudioDataLoadState.Loaded)
-            yield return www;
-
-        miAudioSource.clip = myAudioClip;
-        miAudioSource.Play();
-    }
-
-    private void PlayVideo()
-    {
-        EnImagen = true;
-        EnVideo = true;
-        PanelVideo.gameObject.SetActive(true);
-        PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Stop();
-        
-        try
-        {
-            StopCoroutine(loadVideo(camino));
-            StartCoroutine(loadVideo(camino));
-        }
-        catch (System.Exception ex)
-        {
-            LOG = ex.Message;
-        }
-    }
-
-    IEnumerator loadVideo(string path)
-    {
-        PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().url = path;
-        PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Prepare();
-
-        while (!PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().isPrepared)
-            yield return null;
-
-        PanelVideo.gameObject.GetComponentInChildren<VideoPlayer>().Play();
-    }
-
-    private void MostrarTexto()
-    {
-        EnEditorTexto = true;
-        
-        string elTexto = "";
-        PanelEditorTexto2.gameObject.SetActive(true);
-        StreamReader sr = new StreamReader(camino, System.Text.Encoding.GetEncoding("iso-8859-1"));
-
-        try
-        {
-            while (!sr.EndOfStream)
-            {
-                elTexto += sr.ReadLine() + "\n";
-            }
-            sr.Close();
-
-            if (elTexto.Length > 1)
-            {
-                PanelEditorTexto2.GetComponentInChildren<InputField>().text = elTexto.Remove(elTexto.Length - 1);
-            }
-            else
-            {
-                PanelEditorTexto2.GetComponentInChildren<InputField>().text = "";
-            }
-        }
-        catch
-        {
-            PanelEditorTexto2.GetComponentInChildren<InputField>().text = "";
-        }        
-    }
-    public void SalvarCambiosTexto()
-    {
-        try
-        {
-            StreamWriter sw = new StreamWriter(camino, false, System.Text.Encoding.GetEncoding("iso-8859-1"));
-
-            sw.Write(PanelEditorTexto2.GetComponentInChildren<InputField>().text.Replace("\n", System.Environment.NewLine));
-            sw.Close();
-
-            SistemaSonidos.instancia.PlayFinalizoCopia();
-
-            //actualizar fecha modificacion y tamaño
-            //camino = txtCamino.text;
-            //LimpiarTodo();
-            //CrearDirectorio();
-
-        }
-        catch (System.Exception ex)
-        {
-            LOG = "Error " + ex.Message;
-            SistemaSonidos.instancia.PlayError();
-        }
-    }
-    public void CerrarTextoSinSalvar()
-    {
-        Paso = false;
-        LOG = "";
-        EnEditorTexto = false;
-        PanelEditorTexto2.gameObject.SetActive(false);
-        StartCoroutine(SeguirPasando());
-    }
-
-    private void MostrarSFO()
-    {
-        EnEditorTexto = true;
-
-        string elTexto = "";
-        PanelEditorTexto1.gameObject.SetActive(true);
-
-        try
-        {
-            var sfo = new Param_SFO.PARAM_SFO(camino);
-
-            for (int i = 0; i < sfo.Tables.Count; i++)
-            {
-                elTexto += sfo.Tables[i].Name + ": " + sfo.Tables[i].Value + "\n";
-            }
-        }
-        catch (System.Exception ex)
-        {
-            LOG = "Error " + ex.Message;
-            SistemaSonidos.instancia.PlayError();
-        }
-
-        PanelEditorTexto1.GetComponentInChildren<Text>().text = elTexto;
-
-        Canvas.ForceUpdateCanvases();
-
-        if (PanelEditorTexto1.GetComponentInChildren<Scrollbar>().size == 1)
-        {
-            PanelEditorTexto1.GetComponentInChildren<Scrollbar>().value = 0;
+            PanelEditorTexto2.GetComponentInChildren<InputField>().text = elTexto.Remove(elTexto.Length - 1);
         }
         else
         {
-            PanelEditorTexto1.GetComponentInChildren<Scrollbar>().value = 1;
+            PanelEditorTexto2.GetComponentInChildren<InputField>().text = "";
         }
     }
-
-    private void MostrarPKG()
+    catch
     {
-        EnImagen = true;
-        PanelPKG.gameObject.SetActive(true);
+        PanelEditorTexto2.GetComponentInChildren<InputField>().text = "";
     }
-
-    // Opciones /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    public void NuevaCarpeta()
+}
+public void SalvarCambiosTexto()
+{
+    try
     {
-        EnOpciones = false;
-        PanelOpciones.SetActive(false);
+        StreamWriter sw = new StreamWriter(camino, false, System.Text.Encoding.GetEncoding("iso-8859-1"));
 
-        EnTeclado = true;
+        sw.Write(PanelEditorTexto2.GetComponentInChildren<InputField>().text.Replace("\n", System.Environment.NewLine));
+        sw.Close();
 
-        FileFolderAction = ActionsWhichRequiresKeyboard.CreateFolder;
+        SistemaSonidos.instancia.PlayFinalizoCopia();
 
-        PanelTeclado.GetComponentInChildren<InputField>().text = "New folder";
-        KeyBoardManagerScr.KeyboardOnScreen();
+        //actualizar fecha modificacion y tamaño
+        //camino = txtCamino.text;
+        //LimpiarTodo();
+        //CrearDirectorio();
+
     }
-
-    public void NuevaCarpetaAccion()
+    catch (System.Exception ex)
     {
-        EnTeclado = false;
+        LOG = "Error " + ex.Message;
+        SistemaSonidos.instancia.PlayError();
+    }
+}
+public void CerrarTextoSinSalvar()
+{
+    Paso = false;
+    LOG = "";
+    EnEditorTexto = false;
+    PanelEditorTexto2.gameObject.SetActive(false);
+    StartCoroutine(SeguirPasando());
+}
 
-        string NuevaCarpetaNombre = KeyBoardManagerScr.TargetKeyboardText.text;
-        if (NuevaCarpetaNombre == "")
-            return;
+private void MostrarSFO()
+{
+    EnEditorTexto = true;
 
-        try
+    string elTexto = "";
+    PanelEditorTexto1.gameObject.SetActive(true);
+
+    try
+    {
+        var sfo = new Param_SFO.PARAM_SFO(camino);
+
+        for (int i = 0; i < sfo.Tables.Count; i++)
         {
-            if (!Directory.Exists(txtCamino.text + _s_ + NuevaCarpetaNombre))
-            {
-                Directory.CreateDirectory(txtCamino.text + _s_ + NuevaCarpetaNombre);
-            }
-            else
-            {
-                LOG = CadenaErrorCrearCarpeta;
-                SistemaSonidos.instancia.PlayError();
-                return;
-            }
-
-            camino = txtCamino.text;
-            LimpiarTodo();
-            CrearDirectorio();
+            elTexto += sfo.Tables[i].Name + ": " + sfo.Tables[i].Value + "\n";
         }
-        catch (System.Exception ex)
+    }
+    catch (System.Exception ex)
+    {
+        LOG = "Error " + ex.Message;
+        SistemaSonidos.instancia.PlayError();
+    }
+
+    PanelEditorTexto1.GetComponentInChildren<Text>().text = elTexto;
+
+    Canvas.ForceUpdateCanvases();
+
+    if (PanelEditorTexto1.GetComponentInChildren<Scrollbar>().size == 1)
+    {
+        PanelEditorTexto1.GetComponentInChildren<Scrollbar>().value = 0;
+    }
+    else
+    {
+        PanelEditorTexto1.GetComponentInChildren<Scrollbar>().value = 1;
+    }
+}
+
+private void MostrarPKG()
+{
+    EnImagen = true;
+    PanelPKG.gameObject.SetActive(true);
+}
+
+// Opciones /////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+public void NuevaCarpeta()
+{
+    EnOpciones = false;
+    PanelOpciones.SetActive(false);
+
+    EnTeclado = true;
+
+    FileFolderAction = ActionsWhichRequiresKeyboard.CreateFolder;
+
+    PanelTeclado.GetComponentInChildren<InputField>().text = "New folder";
+    KeyBoardManagerScr.KeyboardOnScreen();
+}
+
+public void NuevaCarpetaAccion()
+{
+    EnTeclado = false;
+
+    string NuevaCarpetaNombre = KeyBoardManagerScr.TargetKeyboardText.text;
+    if (NuevaCarpetaNombre == "")
+        return;
+
+    try
+    {
+        if (!Directory.Exists(txtCamino.text + _s_ + NuevaCarpetaNombre))
         {
-            LOG = "Error " + ex.Message;
+            Directory.CreateDirectory(txtCamino.text + _s_ + NuevaCarpetaNombre);
+        }
+        else
+        {
+            LOG = CadenaErrorCrearCarpeta;
             SistemaSonidos.instancia.PlayError();
-        }
-    }
-
-    public void NuevoFichero()
-    {
-        EnOpciones = false;
-        PanelOpciones.SetActive(false);
-
-        EnTeclado = true;
-
-        FileFolderAction = ActionsWhichRequiresKeyboard.CrearFichero;
-
-        PanelTeclado.GetComponentInChildren<InputField>().text = "New file.txt";
-        KeyBoardManagerScr.KeyboardOnScreen();
-    }
-
-    public void NuevoFicheroAccion()
-    {
-        EnTeclado = false;
-
-        string NuevaFicheroNombre = KeyBoardManagerScr.TargetKeyboardText.text;
-        if (NuevaFicheroNombre == "")
             return;
-
-        try
-        {
-            if (!File.Exists(txtCamino.text + _s_ + NuevaFicheroNombre))
-            {
-                File.CreateText(txtCamino.text + _s_ + NuevaFicheroNombre);
-            }
-            else
-            {
-                LOG = CadenaErrorCrearFichero;
-                SistemaSonidos.instancia.PlayError();
-                return;
-            }
-        }
-        catch (System.Exception ex)
-        {
-            LOG = "Error " + ex.Message;
-            SistemaSonidos.instancia.PlayError();
         }
 
         camino = txtCamino.text;
         LimpiarTodo();
         CrearDirectorio();
     }
-
-    public void DescargarFichero()
+    catch (System.Exception ex)
     {
-        EnOpciones = false;
-        PanelOpciones.SetActive(false);
-
-        EnTeclado = true;
-
-        FileFolderAction = ActionsWhichRequiresKeyboard.DescargarFichero;
-
-        PanelTeclado.GetComponentInChildren<InputField>().text = "http://";
-        KeyBoardManagerScr.KeyboardOnScreen();
+        LOG = "Error " + ex.Message;
+        SistemaSonidos.instancia.PlayError();
     }
+}
 
-    public void DescargarFicheroAction()
+public void NuevoFichero()
+{
+    EnOpciones = false;
+    PanelOpciones.SetActive(false);
+
+    EnTeclado = true;
+
+    FileFolderAction = ActionsWhichRequiresKeyboard.CrearFichero;
+
+    PanelTeclado.GetComponentInChildren<InputField>().text = "New file.txt";
+    KeyBoardManagerScr.KeyboardOnScreen();
+}
+
+public void NuevoFicheroAccion()
+{
+    EnTeclado = false;
+
+    string NuevaFicheroNombre = KeyBoardManagerScr.TargetKeyboardText.text;
+    if (NuevaFicheroNombre == "")
+        return;
+
+    try
     {
-        EnTeclado = false;
-
-        string FicheroURL = KeyBoardManagerScr.TargetKeyboardText.text;
-        if (FicheroURL == "")
-            return;
-
-        StartCoroutine(DownloadFichero(FicheroURL));
-    }
-
-    IEnumerator DownloadFichero(string FicheroURL)
-    {
-        using (var www = UnityWebRequest.Get(FicheroURL.Trim()))
+        if (!File.Exists(txtCamino.text + _s_ + NuevaFicheroNombre))
         {
-            string Destino = txtCamino.text;
-            www.SendWebRequest();
-
-            if (www.isNetworkError || www.isHttpError)
-            {
-                LOG = "Error: " + www.error;
-                SistemaSonidos.instancia.PlayError();
-            }
-            else
-            {
-                while (!www.isDone)
-                {
-                    LOG = "Downloading " + (www.downloadProgress * 100).ToString("n2") + " %";
-                    yield return null;
-                }
-
-                try
-                {
-                    File.WriteAllBytes(Destino + _s_ + Path.GetFileName(www.url), www.downloadHandler.data);
-                    SistemaSonidos.instancia.PlayFinalizoCopia();
-                    LOG = "Download completed in: " + Destino;
-                }
-                catch (Exception ex)
-                {
-                    LOG = "Error: " + ex.Message;
-                    SistemaSonidos.instancia.PlayError();
-                }
-
-                yield return null;
-
-                if (Destino == txtCamino.text)
-                {
-                    camino = txtCamino.text;
-                    LimpiarTodo();
-                    CrearDirectorio();
-                }
-            }
-        }
-    }
-    
-    string FicheroACortar = "";
-    string FicheroACopiar = "";
-    
-    public void Cortar()
-    {
-        if (camino != "")
-        {
-            EnOpciones = false;
-            PanelOpciones.SetActive(false);
-
-            Color elColor = carpetasPrefab.GetComponentInChildren<Text>().color;
-            elColor.a = 0.4f;
-
-            if (!Multiseleccion)
-            {
-                FicheroACopiar = "";
-                FicheroACortar = camino;
-
-                OscurecerCortado();
-                ObjetosCreados[Posicion].GetComponent<UnityEngine.UI.Image>().color = new Color(255, 255, 255, 0.4f);
-                ObjetosCreados[Posicion].GetComponentInChildren<Text>().color = elColor;
-            }
-            else
-            {
-                FicheroACortar = "";
-
-                for (int i = 0; i < ObjetosSelecionados.Count; i++)
-                {
-                    ObjetosCreados[ObjetosSelecionados[i]].GetComponent<UnityEngine.UI.Image>().color = new Color(255, 255, 255, 0.4f);
-                    ObjetosCreados[ObjetosSelecionados[i]].GetComponentInChildren<Text>().color = elColor;
-                }
-            }
-
-            MultiseleccionCortada = Multiseleccion;
-            MultiseleccionCopiada = false;
-        }
-    }
-
-    private void OscurecerCortado()
-    {
-        Color elColor = carpetasPrefab.GetComponentInChildren<Text>().color;
-
-        for (int i = 0; i < scaneo.Length; i++)
-        {
-            ObjetosCreados[i].GetComponent<UnityEngine.UI.Image>().color = new Color(255, 255, 255, 1f);
-            ObjetosCreados[i].GetComponentInChildren<Text>().color = elColor;
-        }
-    }
-
-    public void Copiar()
-    {
-        if (camino != "")
-        {
-            EnOpciones = false;
-            PanelOpciones.SetActive(false);
-
-            if (!Multiseleccion)
-            {
-                FicheroACortar = "";
-                FicheroACopiar = camino;
-            }
-            else
-            {
-                FicheroACopiar = "";
-            }
-
-            MultiseleccionCopiada = Multiseleccion;
-            MultiseleccionCortada = false;
-
-            OscurecerCortado();
-        }
-    }
-
-    public void Pegar()
-    {
-        EnOpciones = false;
-        PanelOpciones.SetActive(false);
-
-        if (MultiseleccionCopiada)
-        {
-            Pegando = true;
-            CantArchivos = ObjetosCaminos.Count;
-
-            PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
-            PanelCopiando.gameObject.SetActive(true);
-            PanelCopiando.GetComponentInChildren<Text>().text = CadenaCopiando;
-
-            try
-            {
-                StartCoroutine(CopiarMultiplesFichero());
-            }
-            catch (System.Exception ex)
-            {
-                LOG = "Error " + ex.Message;
-                CantArchivos = 0;
-                Pegando = false;
-                SistemaSonidos.instancia.PlayError();
-            }
-        }
-        else if (MultiseleccionCortada)
-        {
-            Pegando = true;
-            CantArchivos = ObjetosCaminos.Count;
-
-            PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
-            PanelCopiando.gameObject.SetActive(true);
-            PanelCopiando.GetComponentInChildren<Text>().text = CadenaMoviendo;
-
-            try
-            {
-                StartCoroutine(CortarMultiplesFichero());
-            }
-            catch (System.Exception ex)
-            {
-                LOG = "Error " + ex.Message;
-                CantArchivos = 0;
-                Pegando = false;
-                SistemaSonidos.instancia.PlayError();
-            }
+            File.CreateText(txtCamino.text + _s_ + NuevaFicheroNombre);
         }
         else
         {
-            if (FicheroACortar != "")
+            LOG = CadenaErrorCrearFichero;
+            SistemaSonidos.instancia.PlayError();
+            return;
+        }
+    }
+    catch (System.Exception ex)
+    {
+        LOG = "Error " + ex.Message;
+        SistemaSonidos.instancia.PlayError();
+    }
+
+    camino = txtCamino.text;
+    LimpiarTodo();
+    CrearDirectorio();
+}
+
+public void DescargarFichero()
+{
+    EnOpciones = false;
+    PanelOpciones.SetActive(false);
+
+    EnTeclado = true;
+
+    FileFolderAction = ActionsWhichRequiresKeyboard.DescargarFichero;
+
+    PanelTeclado.GetComponentInChildren<InputField>().text = "http://";
+    KeyBoardManagerScr.KeyboardOnScreen();
+}
+
+public void DescargarFicheroAction()
+{
+    EnTeclado = false;
+
+    string FicheroURL = KeyBoardManagerScr.TargetKeyboardText.text;
+    if (FicheroURL == "")
+        return;
+
+    StartCoroutine(DownloadFichero(FicheroURL));
+}
+
+IEnumerator DownloadFichero(string FicheroURL)
+{
+    using (var www = UnityWebRequest.Get(FicheroURL.Trim()))
+    {
+        string Destino = txtCamino.text;
+        www.SendWebRequest();
+
+        if (www.isNetworkError || www.isHttpError)
+        {
+            LOG = "Error: " + www.error;
+            SistemaSonidos.instancia.PlayError();
+        }
+        else
+        {
+            while (!www.isDone)
             {
-                try
+                LOG = "Downloading " + (www.downloadProgress * 100).ToString("n2") + " %";
+                yield return null;
+            }
+
+            try
+            {
+                File.WriteAllBytes(Destino + _s_ + Path.GetFileName(www.url), www.downloadHandler.data);
+                SistemaSonidos.instancia.PlayFinalizoCopia();
+                LOG = "Download completed in: " + Destino;
+            }
+            catch (Exception ex)
+            {
+                LOG = "Error: " + ex.Message;
+                SistemaSonidos.instancia.PlayError();
+            }
+
+            yield return null;
+
+            if (Destino == txtCamino.text)
+            {
+                camino = txtCamino.text;
+                LimpiarTodo();
+                CrearDirectorio();
+            }
+        }
+    }
+}
+
+string FicheroACortar = "";
+string FicheroACopiar = "";
+
+public void Cortar()
+{
+    if (camino != "")
+    {
+        EnOpciones = false;
+        PanelOpciones.SetActive(false);
+
+        Color elColor = carpetasPrefab.GetComponentInChildren<Text>().color;
+        elColor.a = 0.4f;
+
+        if (!Multiseleccion)
+        {
+            FicheroACopiar = "";
+            FicheroACortar = camino;
+
+            OscurecerCortado();
+            ObjetosCreados[Posicion].GetComponent<UnityEngine.UI.Image>().color = new Color(255, 255, 255, 0.4f);
+            ObjetosCreados[Posicion].GetComponentInChildren<Text>().color = elColor;
+        }
+        else
+        {
+            FicheroACortar = "";
+
+            for (int i = 0; i < ObjetosSelecionados.Count; i++)
+            {
+                ObjetosCreados[ObjetosSelecionados[i]].GetComponent<UnityEngine.UI.Image>().color = new Color(255, 255, 255, 0.4f);
+                ObjetosCreados[ObjetosSelecionados[i]].GetComponentInChildren<Text>().color = elColor;
+            }
+        }
+
+        MultiseleccionCortada = Multiseleccion;
+        MultiseleccionCopiada = false;
+    }
+}
+
+private void OscurecerCortado()
+{
+    Color elColor = carpetasPrefab.GetComponentInChildren<Text>().color;
+
+    for (int i = 0; i < scaneo.Length; i++)
+    {
+        ObjetosCreados[i].GetComponent<UnityEngine.UI.Image>().color = new Color(255, 255, 255, 1f);
+        ObjetosCreados[i].GetComponentInChildren<Text>().color = elColor;
+    }
+}
+
+public void Copiar()
+{
+    if (camino != "")
+    {
+        EnOpciones = false;
+        PanelOpciones.SetActive(false);
+
+        if (!Multiseleccion)
+        {
+            FicheroACortar = "";
+            FicheroACopiar = camino;
+        }
+        else
+        {
+            FicheroACopiar = "";
+        }
+
+        MultiseleccionCopiada = Multiseleccion;
+        MultiseleccionCortada = false;
+
+        OscurecerCortado();
+    }
+}
+
+public void Pegar()
+{
+    EnOpciones = false;
+    PanelOpciones.SetActive(false);
+
+    if (MultiseleccionCopiada)
+    {
+        Pegando = true;
+        CantArchivos = ObjetosCaminos.Count;
+
+        PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
+        PanelCopiando.gameObject.SetActive(true);
+        PanelCopiando.GetComponentInChildren<Text>().text = CadenaCopiando;
+
+        try
+        {
+            StartCoroutine(CopiarMultiplesFichero());
+        }
+        catch (System.Exception ex)
+        {
+            LOG = "Error " + ex.Message;
+            CantArchivos = 0;
+            Pegando = false;
+            SistemaSonidos.instancia.PlayError();
+        }
+    }
+    else if (MultiseleccionCortada)
+    {
+        Pegando = true;
+        CantArchivos = ObjetosCaminos.Count;
+
+        PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
+        PanelCopiando.gameObject.SetActive(true);
+        PanelCopiando.GetComponentInChildren<Text>().text = CadenaMoviendo;
+
+        try
+        {
+            StartCoroutine(CortarMultiplesFichero());
+        }
+        catch (System.Exception ex)
+        {
+            LOG = "Error " + ex.Message;
+            CantArchivos = 0;
+            Pegando = false;
+            SistemaSonidos.instancia.PlayError();
+        }
+    }
+    else
+    {
+        if (FicheroACortar != "")
+        {
+            try
+            {
+                if (Directory.Exists(FicheroACortar))
                 {
-                    if (Directory.Exists(FicheroACortar))
-                    {
-                        if (Path.GetFullPath(FicheroACortar) != Path.GetFullPath(txtCamino.text + _s_ + Path.GetFileName(FicheroACortar)))
-                        {
-                            Pegando = true;
-                            ContarFicheros(FicheroACortar);
-                            PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
-                            PanelCopiando.gameObject.SetActive(true);
-                            PanelCopiando.GetComponentInChildren<Text>().text = CadenaMoviendo;
-
-                            StartCoroutine(MoverDirectorio(FicheroACortar, txtCamino.text + _s_ + Path.GetFileName(FicheroACortar), false));
-                            StartCoroutine(EliminarDirectorioMovidos(FicheroACortar));
-
-                            FicheroACortar = "";
-
-                            camino = txtCamino.text;
-                            LimpiarTodo();
-                            CrearDirectorio();
-                        }
-                        else
-                        {
-                            OscurecerCortado();
-                        }
-                    }
-                    else
+                    if (Path.GetFullPath(FicheroACortar) != Path.GetFullPath(txtCamino.text + _s_ + Path.GetFileName(FicheroACortar)))
                     {
                         Pegando = true;
-                        CantArchivos = 1;
-                        PanelCopiando.GetComponentInChildren<Slider>().maxValue = 1;
+                        ContarFicheros(FicheroACortar);
+                        PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
                         PanelCopiando.gameObject.SetActive(true);
                         PanelCopiando.GetComponentInChildren<Text>().text = CadenaMoviendo;
 
-                        StartCoroutine(MoverFichero(FicheroACortar, txtCamino.text + _s_ + Path.GetFileName(FicheroACortar)));
-                    }
-                }
-                catch (System.Exception ex)
-                {
-                    LOG = "Error " + ex.Message;
-                    CantArchivos = 0;
-                    Pegando = false;
-                    SistemaSonidos.instancia.PlayError();
-                }
-            }
-            else if (FicheroACopiar != "")
-            {
-                try
-                {
-                    if (Directory.Exists(FicheroACopiar))
-                    {
-                        Pegando = true;
-                        ContarFicheros(FicheroACopiar);
-                        PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
-                        PanelCopiando.gameObject.SetActive(true);
-                        PanelCopiando.GetComponentInChildren<Text>().text = CadenaCopiando;
+                        StartCoroutine(MoverDirectorio(FicheroACortar, txtCamino.text + _s_ + Path.GetFileName(FicheroACortar), false));
+                        StartCoroutine(EliminarDirectorioMovidos(FicheroACortar));
 
-                        if (Path.GetFullPath(FicheroACopiar) != Path.GetFullPath(txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar)))
-                        {
-                            StartCoroutine(CopiarDirectorio(FicheroACopiar, txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar), false, true));
-                        }
-                        else
-                        {
-                            StartCoroutine(CopiarDirectorio(FicheroACopiar, txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar) + "_copy", false, true));
-                        }
+                        FicheroACortar = "";
 
                         camino = txtCamino.text;
                         LimpiarTodo();
@@ -2027,74 +2021,170 @@ public class Controlador : MonoBehaviour {
                     }
                     else
                     {
-                        Pegando = true;
-                        CantArchivos = 1;
-                        PanelCopiando.GetComponentInChildren<Slider>().maxValue = 1;
-                        PanelCopiando.gameObject.SetActive(true);
-                        PanelCopiando.GetComponentInChildren<Text>().text = CadenaCopiando;
+                        OscurecerCortado();
+                    }
+                }
+                else
+                {
+                    Pegando = true;
+                    CantArchivos = 1;
+                    PanelCopiando.GetComponentInChildren<Slider>().maxValue = 1;
+                    PanelCopiando.gameObject.SetActive(true);
+                    PanelCopiando.GetComponentInChildren<Text>().text = CadenaMoviendo;
 
-                        StartCoroutine(CopiarFichero(FicheroACopiar, txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar)));
+                    StartCoroutine(MoverFichero(FicheroACortar, txtCamino.text + _s_ + Path.GetFileName(FicheroACortar)));
+                }
+            }
+            catch (System.Exception ex)
+            {
+                LOG = "Error " + ex.Message;
+                CantArchivos = 0;
+                Pegando = false;
+                SistemaSonidos.instancia.PlayError();
+            }
+        }
+        else if (FicheroACopiar != "")
+        {
+            try
+            {
+                if (Directory.Exists(FicheroACopiar))
+                {
+                    Pegando = true;
+                    ContarFicheros(FicheroACopiar);
+                    PanelCopiando.GetComponentInChildren<Slider>().maxValue = CantArchivos;
+                    PanelCopiando.gameObject.SetActive(true);
+                    PanelCopiando.GetComponentInChildren<Text>().text = CadenaCopiando;
+
+                    if (Path.GetFullPath(FicheroACopiar) != Path.GetFullPath(txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar)))
+                    {
+                        StartCoroutine(CopiarDirectorio(FicheroACopiar, txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar), false, true));
+                    }
+                    else
+                    {
+                        StartCoroutine(CopiarDirectorio(FicheroACopiar, txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar) + "_copy", false, true));
+                    }
+
+                    camino = txtCamino.text;
+                    LimpiarTodo();
+                    CrearDirectorio();
+                }
+                else
+                {
+                    Pegando = true;
+                    CantArchivos = 1;
+                    PanelCopiando.GetComponentInChildren<Slider>().maxValue = 1;
+                    PanelCopiando.gameObject.SetActive(true);
+                    PanelCopiando.GetComponentInChildren<Text>().text = CadenaCopiando;
+
+                    StartCoroutine(CopiarFichero(FicheroACopiar, txtCamino.text + _s_ + Path.GetFileName(FicheroACopiar)));
+                }
+            }
+            catch (System.Exception ex)
+            {
+                LOG = "Error " + ex.Message;
+                CantArchivos = 0;
+                Pegando = false;
+                SistemaSonidos.instancia.PlayError();
+            }
+        }
+        else
+        {
+            LOG = CadenaNoHasCopiado;
+        }
+    }
+}
+
+string TextoOriginal = "";
+public void Renombra()
+{
+    if (!Multiseleccion && camino != "")
+    {
+        if (FicheroACopiar == camino)
+            FicheroACopiar = "";
+
+        if (FicheroACortar == camino)
+            FicheroACortar = "";
+
+        EnOpciones = false;
+        PanelOpciones.SetActive(false);
+
+        EnTeclado = true;
+
+        FileFolderAction = ActionsWhichRequiresKeyboard.RenameFile;
+
+        TextoOriginal = Path.GetFileName(camino);
+        PanelTeclado.GetComponentInChildren<InputField>().text = TextoOriginal;
+
+        KeyBoardManagerScr.KeyboardOnScreen();
+    }
+}
+
+public void RenombrarAccion()
+{
+    EnTeclado = false;
+
+    string TextoCambiado = KeyBoardManagerScr.TargetKeyboardText.text;
+    if (TextoCambiado == "")
+        return;
+
+    try
+    {
+        if (TextoOriginal != TextoCambiado)
+        {
+            if (Directory.Exists(camino))
+            {
+                Directory.Move(camino, txtCamino.text + _s_ + TextoCambiado);
+            }
+            else
+            {
+                File.Move(camino, txtCamino.text + _s_ + TextoCambiado);
+            }
+
+            camino = txtCamino.text;
+            LimpiarTodo();
+            CrearDirectorio();
+        }
+    }
+    catch (System.Exception ex)
+    {
+        LOG = "Error " + ex.Message;
+        SistemaSonidos.instancia.PlayError();
+    }
+}
+
+public bool Seguro = false;
+public void Eliminar()
+{
+    if (camino != "")
+    {
+        if (FicheroACopiar == camino)
+            FicheroACopiar = "";
+
+        if (FicheroACortar == camino)
+            FicheroACortar = "";
+
+        EnOpciones = false;
+        PanelOpciones.SetActive(false);
+
+        if (Multiseleccion)
+        {
+            for (int i = 0; i < ObjetosCaminos.Count; i++)
+            {
+                try
+                {
+                    if (Directory.Exists(ObjetosCaminos[i]))
+                    {
+                        Directory.Delete(ObjetosCaminos[i], true);
+                    }
+                    else
+                    {
+                        File.Delete(ObjetosCaminos[i]);
                     }
                 }
                 catch (System.Exception ex)
                 {
                     LOG = "Error " + ex.Message;
-                    CantArchivos = 0;
-                    Pegando = false;
                     SistemaSonidos.instancia.PlayError();
-                }
-            }
-            else
-            {
-                LOG = CadenaNoHasCopiado;
-            }
-        }
-    }
-
-    string TextoOriginal = "";
-    public void Renombra()
-    {
-        if (!Multiseleccion && camino != "")
-        {
-            if (FicheroACopiar == camino)
-                FicheroACopiar = "";
-
-            if (FicheroACortar == camino)
-                FicheroACortar = "";
-
-            EnOpciones = false;
-            PanelOpciones.SetActive(false);
-
-            EnTeclado = true;
-
-            FileFolderAction = ActionsWhichRequiresKeyboard.RenameFile;
-                        
-            TextoOriginal = Path.GetFileName(camino);
-            PanelTeclado.GetComponentInChildren<InputField>().text = TextoOriginal;
-
-            KeyBoardManagerScr.KeyboardOnScreen();
-        }
-    }
-
-    public void RenombrarAccion()
-    {
-        EnTeclado = false;
-
-        string TextoCambiado = KeyBoardManagerScr.TargetKeyboardText.text;
-        if (TextoCambiado == "")
-            return;
-
-        try
-        {
-            if (TextoOriginal != TextoCambiado)
-            {
-                if (Directory.Exists(camino))
-                {
-                    Directory.Move(camino, txtCamino.text + _s_ + TextoCambiado);
-                }
-                else
-                {
-                    File.Move(camino, txtCamino.text + _s_ + TextoCambiado);
                 }
 
                 camino = txtCamino.text;
@@ -2102,372 +2192,144 @@ public class Controlador : MonoBehaviour {
                 CrearDirectorio();
             }
         }
+        else
+        {
+            try
+            {
+                if (Directory.Exists(camino))
+                {
+                    Directory.Delete(camino, true);
+                }
+                else
+                {
+                    File.Delete(camino);
+                }
+
+                camino = txtCamino.text;
+                LimpiarTodo();
+                CrearDirectorio();
+            }
+            catch (System.Exception ex)
+            {
+                LOG = "Error " + ex.Message;
+                SistemaSonidos.instancia.PlayError();
+            }
+        }
+    }
+}
+
+// Auxiliares ///////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+int CantArchivos = 0;
+void ContarFicheros(string origen)
+{
+    CantArchivos = 0;
+
+    string[] files;
+    files = Directory.GetFileSystemEntries(origen);
+    foreach (string element in files)
+    {
+        if (Directory.Exists(element))
+            ContarFicheros(element);
+        else
+            CantArchivos++;
+    }
+}
+
+IEnumerator MoverDirectorio(string origen, string destino, bool SiATodo)
+{
+    miSlider2.gameObject.SetActive(false);
+    BotonCancelar.SetActive(false);
+
+    string[] files;
+    if (destino[destino.Length - 1] != Path.DirectorySeparatorChar)
+        destino += Path.DirectorySeparatorChar;
+
+    if (!Directory.Exists(destino))
+    {
+        try
+        {
+            Directory.CreateDirectory(destino);
+        }
         catch (System.Exception ex)
         {
             LOG = "Error " + ex.Message;
+            PanelCopiando.gameObject.SetActive(false);
+            Pegando = false;
             SistemaSonidos.instancia.PlayError();
+            CantArchivos = 0;
+            StopAllCoroutines();
         }
     }
 
-    public bool Seguro = false;
-    public void Eliminar()
+    yield return null;
+
+    files = Directory.GetFileSystemEntries(origen);
+    foreach (string element in files)
     {
-        if (camino != "")
+        if (Directory.Exists(element))
+            StartCoroutine(MoverDirectorio(element, destino + Path.GetFileName(element), SiATodo));
+        else
         {
-            if (FicheroACopiar == camino)
-                FicheroACopiar = "";
-
-            if (FicheroACortar == camino)
-                FicheroACortar = "";
-
-            EnOpciones = false;
-            PanelOpciones.SetActive(false);
-
-            if (Multiseleccion)
+            if (File.Exists(destino + Path.GetFileName(element)))
             {
-                for (int i = 0; i < ObjetosCaminos.Count; i++)
+                if (!SiATodo)
                 {
-                    try
-                    {
-                        if (Directory.Exists(ObjetosCaminos[i]))
-                        {
-                            Directory.Delete(ObjetosCaminos[i], true);
-                        }
-                        else
-                        {
-                            File.Delete(ObjetosCaminos[i]);
-                        }
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LOG = "Error " + ex.Message;
-                        SistemaSonidos.instancia.PlayError();
-                    }
+                    PanelMensaje.SetActive(true);
+                    PanelMensaje.transform.GetChild(6).gameObject.SetActive(true);
+                    EventSystem.current.SetSelectedGameObject(null);
+                    EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
+                    PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(destino + Path.GetFileName(element));
 
-                    camino = txtCamino.text;
-                    LimpiarTodo();
-                    CrearDirectorio();
+                    while (AccionSobrescribir == Sobreescribir.Stop)
+                        yield return null;
                 }
-            }
-            else
-            {
+
                 try
                 {
-                    if (Directory.Exists(camino))
+                    switch (AccionSobrescribir)
                     {
-                        Directory.Delete(camino, true);
-                    }
-                    else
-                    {
-                        File.Delete(camino);
+                        case Sobreescribir.Si:
+                            File.Delete(destino + Path.GetFileName(element));
+                            File.Move(element, destino + Path.GetFileName(element));
+                            break;
+                        case Sobreescribir.SiTodo:
+                            SiATodo = true;
+                            File.Delete(destino + Path.GetFileName(element));
+                            File.Move(element, destino + Path.GetFileName(element));
+                            break;
+                        case Sobreescribir.No:
+                            break;
+                        case Sobreescribir.Cancel:
+                            PanelCopiando.gameObject.SetActive(false);
+                            Pegando = false;
+                            CantArchivos = 0;
+
+                            AccionSobrescribir = Sobreescribir.Stop;
+                            StopAllCoroutines();
+                            break;
                     }
 
-                    camino = txtCamino.text;
-                    LimpiarTodo();
-                    CrearDirectorio();
+                    CantArchivos--;
                 }
                 catch (System.Exception ex)
                 {
                     LOG = "Error " + ex.Message;
+                    PanelCopiando.gameObject.SetActive(false);
+                    Pegando = false;
                     SistemaSonidos.instancia.PlayError();
-                }
-            }
-        }
-    }
-
-    // Auxiliares ///////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-    int CantArchivos = 0;
-    void ContarFicheros(string origen)
-    {
-        CantArchivos = 0;
-
-        string[] files;
-        files = Directory.GetFileSystemEntries(origen);
-        foreach (string element in files)
-        {
-            if (Directory.Exists(element))
-                ContarFicheros(element);
-            else
-                CantArchivos++;
-        }
-    }
-
-    IEnumerator MoverDirectorio(string origen, string destino, bool SiATodo)
-    {
-        miSlider2.gameObject.SetActive(false);
-        BotonCancelar.SetActive(false);
-
-        string[] files;
-        if (destino[destino.Length - 1] != Path.DirectorySeparatorChar)
-            destino += Path.DirectorySeparatorChar;
-
-        if (!Directory.Exists(destino))
-        {
-            try
-            {
-                Directory.CreateDirectory(destino);
-            }
-            catch (System.Exception ex)
-            {
-                LOG = "Error " + ex.Message;
-                PanelCopiando.gameObject.SetActive(false);
-                Pegando = false;
-                SistemaSonidos.instancia.PlayError();
-                CantArchivos = 0;
-                StopAllCoroutines();
-            }
-        }
-
-        yield return null;
-
-        files = Directory.GetFileSystemEntries(origen);
-        foreach (string element in files)
-        {
-            if (Directory.Exists(element))
-                StartCoroutine(MoverDirectorio(element, destino + Path.GetFileName(element), SiATodo));
-            else
-            {
-                if (File.Exists(destino + Path.GetFileName(element)))
-                {
-                    if (!SiATodo)
-                    {
-                        PanelMensaje.SetActive(true);
-                        PanelMensaje.transform.GetChild(6).gameObject.SetActive(true);
-                        EventSystem.current.SetSelectedGameObject(null);
-                        EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
-                        PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(destino + Path.GetFileName(element));
-
-                        while (AccionSobrescribir == Sobreescribir.Stop)
-                            yield return null;
-                    }
-
-                    try
-                    {
-                        switch (AccionSobrescribir)
-                        {
-                            case Sobreescribir.Si:
-                                File.Delete(destino + Path.GetFileName(element));
-                                File.Move(element, destino + Path.GetFileName(element));
-                                break;
-                            case Sobreescribir.SiTodo:
-                                SiATodo = true;
-                                File.Delete(destino + Path.GetFileName(element));
-                                File.Move(element, destino + Path.GetFileName(element));
-                                break;
-                            case Sobreescribir.No:
-                                break;
-                            case Sobreescribir.Cancel:
-                                PanelCopiando.gameObject.SetActive(false);
-                                Pegando = false;
-                                CantArchivos = 0;
-
-                                AccionSobrescribir = Sobreescribir.Stop;
-                                StopAllCoroutines();
-                                break;
-                        }
-
-                        CantArchivos--;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LOG = "Error " + ex.Message;
-                        PanelCopiando.gameObject.SetActive(false);
-                        Pegando = false;
-                        SistemaSonidos.instancia.PlayError();
-                        CantArchivos = 0;
-                        StopAllCoroutines();
-                    }
-
-                    AccionSobrescribir = Sobreescribir.Stop;
-                }
-                else
-                {
-                    try
-                    {
-                        File.Move(element, destino + Path.GetFileName(element));
-                        CantArchivos--;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LOG = "Error " + ex.Message;
-                        PanelCopiando.gameObject.SetActive(false);
-                        Pegando = false;
-                        SistemaSonidos.instancia.PlayError();
-                        CantArchivos = 0;
-                        StopAllCoroutines();
-                    }
-                }                
-            }
-
-            AccionSobrescribir = Sobreescribir.Stop;
-            yield return null;
-        }
-    }
-
-    IEnumerator EliminarDirectorioMovidos(string origen)
-    {
-        while (CantArchivos > 0)
-            yield return null;
-        
-        Directory.Delete(origen, true);
-        StopAllCoroutines();
-    }
-    
-    IEnumerator CopiarDirectorio(string origen, string destino, bool SiATodo, bool Detener)
-    {
-        miSlider2.gameObject.SetActive(false);
-        BotonCancelar.SetActive(false);
-        
-        string[] files;
-        destino += Path.DirectorySeparatorChar;            
-
-        if (!Directory.Exists(destino))
-        {
-            try
-            {
-                Directory.CreateDirectory(destino);
-            }
-            catch (System.Exception ex)
-            {
-                LOG = "Error " + ex.Message;
-                PanelCopiando.gameObject.SetActive(false);
-                Pegando = false;
-                SistemaSonidos.instancia.PlayError();
-                CantArchivos = 0;
-                StopAllCoroutines();
-            }
-        }
-
-        yield return null;
-
-        files = Directory.GetFileSystemEntries(origen);
-        foreach (string element in files)
-        {
-            if (Directory.Exists(element))
-                StartCoroutine(CopiarDirectorio(element, destino + Path.GetFileName(element), SiATodo, Detener));
-            else
-            {
-                if (File.Exists(destino + Path.GetFileName(element)))
-                {
-                    if (!SiATodo)
-                    {
-                        PanelMensaje.SetActive(true);
-                        PanelMensaje.transform.GetChild(6).gameObject.SetActive(true);
-                        EventSystem.current.SetSelectedGameObject(null);
-                        EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
-                        PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(destino + Path.GetFileName(element));
-
-                        while (AccionSobrescribir == Sobreescribir.Stop)
-                            yield return null;
-                    }
-
-                    try
-                    {
-                        switch (AccionSobrescribir)
-                        {
-                            case Sobreescribir.Si:
-                                File.Copy(element, destino + Path.GetFileName(element), true);
-                                break;
-                            case Sobreescribir.SiTodo:
-                                SiATodo = true;
-                                File.Copy(element, destino + Path.GetFileName(element), true);
-                                break;
-                            case Sobreescribir.No:
-                                break;
-                            case Sobreescribir.Cancel:
-                                PanelCopiando.gameObject.SetActive(false);
-                                Pegando = false;
-                                CantArchivos = 0;
-
-                                AccionSobrescribir = Sobreescribir.Stop;
-                                StopAllCoroutines();
-                                break;
-                        }
-
-                        CantArchivos--;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LOG = "Error " + ex.Message;
-                        PanelCopiando.gameObject.SetActive(false);
-                        Pegando = false;
-                        SistemaSonidos.instancia.PlayError();
-                        CantArchivos = 0;
-                        StopAllCoroutines();
-                    }
-
-                    AccionSobrescribir = Sobreescribir.Stop;
-                }
-                else
-                {
-                    try
-                    {
-                        File.Copy(element, destino + Path.GetFileName(element));
-                        CantArchivos--;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LOG = "Error " + ex.Message;
-                        PanelCopiando.gameObject.SetActive(false);
-                        Pegando = false;
-                        SistemaSonidos.instancia.PlayError();
-                        CantArchivos = 0;
-                        StopAllCoroutines();
-                    }
-                }
-
-                if (CantArchivos == 0 && Detener)
+                    CantArchivos = 0;
                     StopAllCoroutines();
-            }
-
-            AccionSobrescribir = Sobreescribir.Stop;
-            yield return null;
-        }
-    }
-
-    IEnumerator MoverFichero(string origen, string destino)
-    {
-        miSlider2.gameObject.SetActive(false);
-        BotonCancelar.SetActive(false);
-        yield return null;
-
-        if (Path.GetFullPath(origen) != Path.GetFullPath(destino))
-        {
-            if (File.Exists(destino))
-            {
-                PanelMensaje.SetActive(true);
-                PanelMensaje.transform.GetChild(6).gameObject.SetActive(false);
-                EventSystem.current.SetSelectedGameObject(null);
-                EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
-                PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(destino);
-
-                while (AccionSobrescribir == Sobreescribir.Stop)
-                    yield return null;
-
-                try
-                {
-                    if (AccionSobrescribir == Sobreescribir.Si)
-                    {
-                        File.Delete(destino);
-                        File.Move(origen, destino);
-                        FicheroACortar = "";
-                    }
                 }
-                catch (System.Exception ex)
-                {
-                    LOG = "Error " + ex.Message;
-                    PanelCopiando.gameObject.SetActive(false);
-                    Pegando = false;
-                    SistemaSonidos.instancia.PlayError();
-                }
+
+                AccionSobrescribir = Sobreescribir.Stop;
             }
             else
             {
                 try
                 {
-                    File.Move(origen, destino);
-                    FicheroACortar = "";
+                    File.Move(element, destino + Path.GetFileName(element));
+                    CantArchivos--;
                 }
                 catch (System.Exception ex)
                 {
@@ -2475,31 +2337,146 @@ public class Controlador : MonoBehaviour {
                     PanelCopiando.gameObject.SetActive(false);
                     Pegando = false;
                     SistemaSonidos.instancia.PlayError();
+                    CantArchivos = 0;
+                    StopAllCoroutines();
                 }
             }
         }
 
-        CantArchivos = 0;
-
-        camino = txtCamino.text;
-        LimpiarTodo();
-        CrearDirectorio();
-
+        AccionSobrescribir = Sobreescribir.Stop;
         yield return null;
     }
+}
 
-    IEnumerator CopiarFichero(string origen, string destino)
-    {
-        miSlider2.gameObject.SetActive(true);
-        BotonCancelar.SetActive(true);
+IEnumerator EliminarDirectorioMovidos(string origen)
+{
+    while (CantArchivos > 0)
         yield return null;
 
-        if (Path.GetFullPath(origen) == Path.GetFullPath(destino))
+    Directory.Delete(origen, true);
+    StopAllCoroutines();
+}
+
+IEnumerator CopiarDirectorio(string origen, string destino, bool SiATodo, bool Detener)
+{
+    miSlider2.gameObject.SetActive(false);
+    BotonCancelar.SetActive(false);
+
+    string[] files;
+    destino += Path.DirectorySeparatorChar;
+
+    if (!Directory.Exists(destino))
+    {
+        try
         {
-            destino = destino.Replace(Path.GetFileName(destino), Path.GetFileNameWithoutExtension(destino) + "_copy" + Path.GetExtension(destino));
+            Directory.CreateDirectory(destino);
+        }
+        catch (System.Exception ex)
+        {
+            LOG = "Error " + ex.Message;
+            PanelCopiando.gameObject.SetActive(false);
+            Pegando = false;
+            SistemaSonidos.instancia.PlayError();
+            CantArchivos = 0;
+            StopAllCoroutines();
+        }
+    }
+
+    yield return null;
+
+    files = Directory.GetFileSystemEntries(origen);
+    foreach (string element in files)
+    {
+        if (Directory.Exists(element))
+            StartCoroutine(CopiarDirectorio(element, destino + Path.GetFileName(element), SiATodo, Detener));
+        else
+        {
+            if (File.Exists(destino + Path.GetFileName(element)))
+            {
+                if (!SiATodo)
+                {
+                    PanelMensaje.SetActive(true);
+                    PanelMensaje.transform.GetChild(6).gameObject.SetActive(true);
+                    EventSystem.current.SetSelectedGameObject(null);
+                    EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
+                    PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(destino + Path.GetFileName(element));
+
+                    while (AccionSobrescribir == Sobreescribir.Stop)
+                        yield return null;
+                }
+
+                try
+                {
+                    switch (AccionSobrescribir)
+                    {
+                        case Sobreescribir.Si:
+                            File.Copy(element, destino + Path.GetFileName(element), true);
+                            break;
+                        case Sobreescribir.SiTodo:
+                            SiATodo = true;
+                            File.Copy(element, destino + Path.GetFileName(element), true);
+                            break;
+                        case Sobreescribir.No:
+                            break;
+                        case Sobreescribir.Cancel:
+                            PanelCopiando.gameObject.SetActive(false);
+                            Pegando = false;
+                            CantArchivos = 0;
+
+                            AccionSobrescribir = Sobreescribir.Stop;
+                            StopAllCoroutines();
+                            break;
+                    }
+
+                    CantArchivos--;
+                }
+                catch (System.Exception ex)
+                {
+                    LOG = "Error " + ex.Message;
+                    PanelCopiando.gameObject.SetActive(false);
+                    Pegando = false;
+                    SistemaSonidos.instancia.PlayError();
+                    CantArchivos = 0;
+                    StopAllCoroutines();
+                }
+
+                AccionSobrescribir = Sobreescribir.Stop;
+            }
+            else
+            {
+                try
+                {
+                    File.Copy(element, destino + Path.GetFileName(element));
+                    CantArchivos--;
+                }
+                catch (System.Exception ex)
+                {
+                    LOG = "Error " + ex.Message;
+                    PanelCopiando.gameObject.SetActive(false);
+                    Pegando = false;
+                    SistemaSonidos.instancia.PlayError();
+                    CantArchivos = 0;
+                    StopAllCoroutines();
+                }
+            }
+
+            if (CantArchivos == 0 && Detener)
+                StopAllCoroutines();
         }
 
-        bool Ok = false;
+        AccionSobrescribir = Sobreescribir.Stop;
+        yield return null;
+    }
+}
+
+IEnumerator MoverFichero(string origen, string destino)
+{
+    miSlider2.gameObject.SetActive(false);
+    BotonCancelar.SetActive(false);
+    yield return null;
+
+    if (Path.GetFullPath(origen) != Path.GetFullPath(destino))
+    {
         if (File.Exists(destino))
         {
             PanelMensaje.SetActive(true);
@@ -2511,75 +2488,79 @@ public class Controlador : MonoBehaviour {
             while (AccionSobrescribir == Sobreescribir.Stop)
                 yield return null;
 
-            if (AccionSobrescribir == Sobreescribir.Si)
+            try
             {
-                try
+                if (AccionSobrescribir == Sobreescribir.Si)
                 {
                     File.Delete(destino);
-
-                    byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
-                    using (FileStream source = new FileStream(origen, FileMode.Open, FileAccess.Read))
-                    {
-                        FileInfo fileData = new FileInfo(origen);
-                        float fileLength = fileData.Length / 1024f;
-
-                        using (FileStream dest = new FileStream(destino, FileMode.CreateNew, FileAccess.Write))
-                        {
-                            float totalBytes = 0;
-                            float persentage = 0;
-                            int currentBlockSize = 0;
-
-                            while ((currentBlockSize = source.Read(buffer, 0, buffer.Length)) > 0)
-                            {
-                                totalBytes += currentBlockSize / 1024f;
-                                persentage = totalBytes / fileLength;
-
-                                dest.Write(buffer, 0, currentBlockSize);
-
-                                miSlider2.value = persentage;
-                                TextPorciento.text = (persentage * 100f).ToString("n2") + " %";
-                                yield return null;
-                                
-                                if (CancelarPegado)
-                                {
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    Ok = true;
+                    File.Move(origen, destino);
+                    FicheroACortar = "";
                 }
-                finally
-                {
-                    if (!Ok)
-                    {
-                        LOG = "Error !";
-                        CantArchivos = 0;
-                        PanelCopiando.gameObject.SetActive(false);
-                        Pegando = false;
-                        SistemaSonidos.instancia.PlayError();
-                    }
-                    else
-                    {
-                        if (CancelarPegado)
-                        {
-                            LOG = "Cancelled !";
-                            CantArchivos = 0;
-                            PanelCopiando.gameObject.SetActive(false);
-                            Pegando = false;
-                            SistemaSonidos.instancia.PlayError();
-                        }
-                    }
-                }
+            }
+            catch (System.Exception ex)
+            {
+                LOG = "Error " + ex.Message;
+                PanelCopiando.gameObject.SetActive(false);
+                Pegando = false;
+                SistemaSonidos.instancia.PlayError();
             }
         }
         else
         {
             try
             {
-                byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
+                File.Move(origen, destino);
+                FicheroACortar = "";
+            }
+            catch (System.Exception ex)
+            {
+                LOG = "Error " + ex.Message;
+                PanelCopiando.gameObject.SetActive(false);
+                Pegando = false;
+                SistemaSonidos.instancia.PlayError();
+            }
+        }
+    }
 
+    CantArchivos = 0;
+
+    camino = txtCamino.text;
+    LimpiarTodo();
+    CrearDirectorio();
+
+    yield return null;
+}
+
+IEnumerator CopiarFichero(string origen, string destino)
+{
+    miSlider2.gameObject.SetActive(true);
+    BotonCancelar.SetActive(true);
+    yield return null;
+
+    if (Path.GetFullPath(origen) == Path.GetFullPath(destino))
+    {
+        destino = destino.Replace(Path.GetFileName(destino), Path.GetFileNameWithoutExtension(destino) + "_copy" + Path.GetExtension(destino));
+    }
+
+    bool Ok = false;
+    if (File.Exists(destino))
+    {
+        PanelMensaje.SetActive(true);
+        PanelMensaje.transform.GetChild(6).gameObject.SetActive(false);
+        EventSystem.current.SetSelectedGameObject(null);
+        EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
+        PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(destino);
+
+        while (AccionSobrescribir == Sobreescribir.Stop)
+            yield return null;
+
+        if (AccionSobrescribir == Sobreescribir.Si)
+        {
+            try
+            {
+                File.Delete(destino);
+
+                byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
                 using (FileStream source = new FileStream(origen, FileMode.Open, FileAccess.Read))
                 {
                     FileInfo fileData = new FileInfo(origen);
@@ -2590,7 +2571,7 @@ public class Controlador : MonoBehaviour {
                         float totalBytes = 0;
                         float persentage = 0;
                         int currentBlockSize = 0;
-                        
+
                         while ((currentBlockSize = source.Read(buffer, 0, buffer.Length)) > 0)
                         {
                             totalBytes += currentBlockSize / 1024f;
@@ -2635,32 +2616,216 @@ public class Controlador : MonoBehaviour {
                 }
             }
         }
-        
-        CantArchivos = 0;
-        yield return null;
-
-        if (CancelarPegado)
+    }
+    else
+    {
+        try
         {
-            CancelarPegado = false;
-            File.Delete(destino);
+            byte[] buffer = new byte[1024 * 1024]; // 1MB buffer
+
+            using (FileStream source = new FileStream(origen, FileMode.Open, FileAccess.Read))
+            {
+                FileInfo fileData = new FileInfo(origen);
+                float fileLength = fileData.Length / 1024f;
+
+                using (FileStream dest = new FileStream(destino, FileMode.CreateNew, FileAccess.Write))
+                {
+                    float totalBytes = 0;
+                    float persentage = 0;
+                    int currentBlockSize = 0;
+
+                    while ((currentBlockSize = source.Read(buffer, 0, buffer.Length)) > 0)
+                    {
+                        totalBytes += currentBlockSize / 1024f;
+                        persentage = totalBytes / fileLength;
+
+                        dest.Write(buffer, 0, currentBlockSize);
+
+                        miSlider2.value = persentage;
+                        TextPorciento.text = (persentage * 100f).ToString("n2") + " %";
+                        yield return null;
+
+                        if (CancelarPegado)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            Ok = true;
+        }
+        finally
+        {
+            if (!Ok)
+            {
+                LOG = "Error !";
+                CantArchivos = 0;
+                PanelCopiando.gameObject.SetActive(false);
+                Pegando = false;
+                SistemaSonidos.instancia.PlayError();
+            }
+            else
+            {
+                if (CancelarPegado)
+                {
+                    LOG = "Cancelled !";
+                    CantArchivos = 0;
+                    PanelCopiando.gameObject.SetActive(false);
+                    Pegando = false;
+                    SistemaSonidos.instancia.PlayError();
+                }
+            }
+        }
+    }
+
+    CantArchivos = 0;
+    yield return null;
+
+    if (CancelarPegado)
+    {
+        CancelarPegado = false;
+        File.Delete(destino);
+    }
+
+    camino = txtCamino.text;
+    LimpiarTodo();
+    CrearDirectorio();
+
+    yield return null;
+}
+
+IEnumerator CopiarMultiplesFichero()
+{
+    miSlider2.gameObject.SetActive(false);
+    BotonCancelar.SetActive(false);
+
+    bool SiATodo = false;
+    yield return null;
+
+    for (int i = 0; i < ObjetosCaminos.Count; i++)
+    {
+        if (File.Exists(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i])))
+        {
+            if (!SiATodo)
+            {
+                PanelMensaje.SetActive(true);
+                PanelMensaje.transform.GetChild(6).gameObject.SetActive(true);
+                EventSystem.current.SetSelectedGameObject(null);
+                EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
+                PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
+
+                while (AccionSobrescribir == Sobreescribir.Stop)
+                    yield return null;
+
+                yield return null;
+            }
+
+            try
+            {
+                switch (AccionSobrescribir)
+                {
+                    case Sobreescribir.Si:
+                        File.Copy(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), true);
+                        break;
+                    case Sobreescribir.SiTodo:
+                        SiATodo = true;
+                        File.Copy(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), true);
+                        break;
+                    case Sobreescribir.Cancel:
+                        PanelCopiando.gameObject.SetActive(false);
+                        Pegando = false;
+                        CantArchivos = 0;
+
+                        AccionSobrescribir = Sobreescribir.Stop;
+
+                        camino = txtCamino.text;
+                        LimpiarTodo();
+                        CrearDirectorio();
+
+                        StopAllCoroutines();
+                        break;
+                }
+
+                CantArchivos--;
+            }
+            catch (System.Exception ex)
+            {
+                LOG = "Error " + ex.Message;
+                PanelCopiando.gameObject.SetActive(false);
+                Pegando = false;
+                CantArchivos = 0;
+                AccionSobrescribir = Sobreescribir.Stop;
+                SistemaSonidos.instancia.PlayError();
+                StopAllCoroutines();
+            }
+
+            if (!SiATodo)
+            {
+                AccionSobrescribir = Sobreescribir.Stop;
+            }
+        }
+        else
+        {
+            if (Directory.Exists(ObjetosCaminos[i]))
+            {
+                // TEST
+                int TempCA = CantArchivos;
+
+                ContarFicheros(ObjetosCaminos[i]);
+                StartCoroutine(CopiarDirectorio(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), SiATodo, false));
+
+                while (CantArchivos > 0)
+                    yield return null;
+
+                CantArchivos = TempCA - 1;
+                // TEST
+            }
+            else
+            {
+                try
+                {
+                    File.Copy(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
+                    CantArchivos--;
+                }
+                catch (System.Exception ex)
+                {
+                    LOG = "Error " + ex.Message;
+                    PanelCopiando.gameObject.SetActive(false);
+                    Pegando = false;
+                    CantArchivos = 0;
+                    SistemaSonidos.instancia.PlayError();
+                    StopAllCoroutines();
+                }
+            }
         }
 
-        camino = txtCamino.text;
-        LimpiarTodo();
-        CrearDirectorio();
-        
+        if (!SiATodo)
+        {
+            AccionSobrescribir = Sobreescribir.Stop;
+        }
         yield return null;
     }
 
-    IEnumerator CopiarMultiplesFichero()
+    if (CantArchivos == 0)
     {
-        miSlider2.gameObject.SetActive(false);
-        BotonCancelar.SetActive(false);
+        camino = txtCamino.text;
+        LimpiarTodo();
+        CrearDirectorio();
+    }
+}
 
-        bool SiATodo = false;
-        yield return null;
+IEnumerator CortarMultiplesFichero()
+{
+    miSlider2.gameObject.SetActive(false);
+    BotonCancelar.SetActive(false);
 
-        for (int i = 0; i < ObjetosCaminos.Count; i++)
+    bool SiATodo = false;
+    yield return null;
+
+    for (int i = 0; i < ObjetosCaminos.Count; i++)
+    {
+        if (Path.GetFullPath(ObjetosCaminos[i]) != Path.GetFullPath(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i])))
         {
             if (File.Exists(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i])))
             {
@@ -2677,23 +2842,25 @@ public class Controlador : MonoBehaviour {
 
                     yield return null;
                 }
-                
+
                 try
                 {
                     switch (AccionSobrescribir)
                     {
                         case Sobreescribir.Si:
-                            File.Copy(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), true);
+                            File.Delete(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
+                            File.Move(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
                             break;
                         case Sobreescribir.SiTodo:
                             SiATodo = true;
-                            File.Copy(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), true);
+                            File.Delete(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
+                            File.Move(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
                             break;
                         case Sobreescribir.Cancel:
                             PanelCopiando.gameObject.SetActive(false);
                             Pegando = false;
                             CantArchivos = 0;
-                            
+
                             AccionSobrescribir = Sobreescribir.Stop;
 
                             camino = txtCamino.text;
@@ -2728,21 +2895,27 @@ public class Controlador : MonoBehaviour {
                 {
                     // TEST
                     int TempCA = CantArchivos;
-                    
+
                     ContarFicheros(ObjetosCaminos[i]);
-                    StartCoroutine(CopiarDirectorio(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), SiATodo, false));
+                    StartCoroutine(MoverDirectorio(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), SiATodo));
 
                     while (CantArchivos > 0)
                         yield return null;
 
                     CantArchivos = TempCA - 1;
+
+                    try
+                    {
+                        Directory.Delete(ObjetosCaminos[i], true);
+                    }
+                    catch {; }
                     // TEST
                 }
                 else
                 {
                     try
                     {
-                        File.Copy(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
+                        File.Move(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
                         CantArchivos--;
                     }
                     catch (System.Exception ex)
@@ -2756,224 +2929,170 @@ public class Controlador : MonoBehaviour {
                     }
                 }
             }
-
-            if (!SiATodo)
-            {
-                AccionSobrescribir = Sobreescribir.Stop;
-            }
-            yield return null;
         }
-
-        if (CantArchivos == 0)
+        else
         {
-            camino = txtCamino.text;
-            LimpiarTodo();
-            CrearDirectorio();
+            CantArchivos--;
         }
-    }
 
-    IEnumerator CortarMultiplesFichero()
-    {
-        miSlider2.gameObject.SetActive(false);
-        BotonCancelar.SetActive(false);
-
-        bool SiATodo = false;
+        if (!SiATodo)
+        {
+            AccionSobrescribir = Sobreescribir.Stop;
+        }
         yield return null;
+    }
 
-        for (int i = 0; i < ObjetosCaminos.Count; i++)
+    if (CantArchivos == 0)
+    {
+        MultiseleccionCortada = false;
+        camino = txtCamino.text;
+        LimpiarTodo();
+        CrearDirectorio();
+    }
+}
+
+// Opciones avanzadas /////////////////////////////////////////////////////////////////////////////////////////////////////////
+bool FtpActivado = false;
+bool FullRwActivado = false;
+
+public void ActivarFTP()
+{
+    if (FW > 0)
+    {
+        try
         {
-            if (Path.GetFullPath(ObjetosCaminos[i]) != Path.GetFullPath(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i])))
+            if (!FtpActivado)
             {
-                if (File.Exists(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i])))
+                FreeFTP();
+                FtpActivado = true;
+            }
+
+            LOG = CadenaFtpActivo + " - I.P: " + Network.player.ipAddress + ", Port: 21";
+        }
+        catch (System.Exception ex)
+        {
+            LOG = "Error " + ex.Message;
+            SistemaSonidos.instancia.PlayError();
+        }
+    }
+}
+
+public void ActivarFullRW()
+{
+    if (FW > 0)
+    {
+        try
+        {
+            if (!FullRwActivado)
+            {
+                FreeMount();
+                FullRwActivado = true;
+            }
+
+            LOG = CadenaRwActivo;
+        }
+        catch (System.Exception ex)
+        {
+            LOG = "Error " + ex.Message;
+            SistemaSonidos.instancia.PlayError();
+        }
+    }
+}
+
+public void SalvarHome()
+{
+    PlayerPrefs.SetInt("Nivel", Nivel);
+    PlayerPrefs.SetString("Home", txtCamino.text);
+    PlayerPrefs.Save();
+
+    LOG = CadenaHomeSalvado;
+}
+
+// descompactador
+private void Descompactar(string tipo)
+{
+    PanelDescompactador.GetComponentInChildren<Slider>().value = 0;
+    EnEditorTexto = true;
+
+    string elTexto = "";
+    int Cantidad = 0;
+    PanelDescompactador.gameObject.SetActive(true);
+
+    switch (tipo)
+    {
+        case ".zip":
+            using (Stream stream = File.OpenRead(camino))
+            using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
+            {
+                while (reader.MoveToNextEntry())
                 {
-                    if (!SiATodo)
+                    if (!reader.Entry.IsDirectory)
                     {
-                        PanelMensaje.SetActive(true);
-                        PanelMensaje.transform.GetChild(6).gameObject.SetActive(true);
-                        EventSystem.current.SetSelectedGameObject(null);
-                        EventSystem.current.SetSelectedGameObject(PanelMensaje.transform.GetChild(3).gameObject);
-                        PanelMensaje.transform.GetChild(2).gameObject.GetComponent<Text>().text = Path.GetFileName(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
-
-                        while (AccionSobrescribir == Sobreescribir.Stop)
-                            yield return null;
-
-                        yield return null;
-                    }
-
-                    try
-                    {
-                        switch (AccionSobrescribir)
-                        {
-                            case Sobreescribir.Si:
-                                File.Delete(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
-                                File.Move(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
-                                break;
-                            case Sobreescribir.SiTodo:
-                                SiATodo = true;
-                                File.Delete(txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
-                                File.Move(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
-                                break;
-                            case Sobreescribir.Cancel:
-                                PanelCopiando.gameObject.SetActive(false);
-                                Pegando = false;
-                                CantArchivos = 0;
-
-                                AccionSobrescribir = Sobreescribir.Stop;
-
-                                camino = txtCamino.text;
-                                LimpiarTodo();
-                                CrearDirectorio();
-
-                                StopAllCoroutines();
-                                break;
-                        }
-
-                        CantArchivos--;
-                    }
-                    catch (System.Exception ex)
-                    {
-                        LOG = "Error " + ex.Message;
-                        PanelCopiando.gameObject.SetActive(false);
-                        Pegando = false;
-                        CantArchivos = 0;
-                        AccionSobrescribir = Sobreescribir.Stop;
-                        SistemaSonidos.instancia.PlayError();
-                        StopAllCoroutines();
-                    }
-
-                    if (!SiATodo)
-                    {
-                        AccionSobrescribir = Sobreescribir.Stop;
-                    }
-                }
-                else
-                {
-                    if (Directory.Exists(ObjetosCaminos[i]))
-                    {
-                        // TEST
-                        int TempCA = CantArchivos;
-
-                        ContarFicheros(ObjetosCaminos[i]);
-                        StartCoroutine(MoverDirectorio(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]), SiATodo));
-
-                        while (CantArchivos > 0)
-                            yield return null;
-
-                        CantArchivos = TempCA - 1;
-
-                        try
-                        {
-                            Directory.Delete(ObjetosCaminos[i], true);
-                        }
-                        catch { ;}
-                        // TEST
-                    }
-                    else
-                    {
-                        try
-                        {
-                            File.Move(ObjetosCaminos[i], txtCamino.text + _s_ + Path.GetFileName(ObjetosCaminos[i]));
-                            CantArchivos--;
-                        }
-                        catch (System.Exception ex)
-                        {
-                            LOG = "Error " + ex.Message;
-                            PanelCopiando.gameObject.SetActive(false);
-                            Pegando = false;
-                            CantArchivos = 0;
-                            SistemaSonidos.instancia.PlayError();
-                            StopAllCoroutines();
-                        }
+                        elTexto += reader.Entry.FilePath + "\n";
+                        Cantidad++;
                     }
                 }
             }
-            else
+            break;
+        case ".rar":
+            using (Stream stream = File.OpenRead(camino))
+            using (var reader = SharpCompress.Reader.Rar.RarReader.Open(stream))
             {
-                CantArchivos--;
-            }
-
-            if (!SiATodo)
-            {
-                AccionSobrescribir = Sobreescribir.Stop;
-            }
-            yield return null;
-        }
-
-        if (CantArchivos == 0)
-        {
-            MultiseleccionCortada = false;
-            camino = txtCamino.text;
-            LimpiarTodo();
-            CrearDirectorio();
-        }
-    }
-
-    // Opciones avanzadas /////////////////////////////////////////////////////////////////////////////////////////////////////////
-    bool FtpActivado = false;
-    bool FullRwActivado = false;
-
-    public void ActivarFTP()
-    {
-        if (FW > 0)
-        {
-            try
-            {
-                if (!FtpActivado)
+                while (reader.MoveToNextEntry())
                 {
-                    FreeFTP();
-                    FtpActivado = true;
+                    if (!reader.Entry.IsDirectory)
+                    {
+                        elTexto += reader.Entry.FilePath + "\n";
+                        Cantidad++;
+                    }
                 }
-
-                LOG = CadenaFtpActivo + " - I.P: " + Network.player.ipAddress + ", Port: 21";
             }
-            catch (System.Exception ex)
+            break;
+        case ".tar":
+            using (Stream stream = File.OpenRead(camino))
+            using (var reader = SharpCompress.Reader.Tar.TarReader.Open(stream))
             {
-                LOG = "Error " + ex.Message;
-                SistemaSonidos.instancia.PlayError();
-            }
-        }
-    }
-
-    public void ActivarFullRW()
-    {
-        if (FW > 0)
-        {
-            try
-            {
-                if (!FullRwActivado)
+                while (reader.MoveToNextEntry())
                 {
-                    FreeMount();
-                    FullRwActivado = true;
+                    if (!reader.Entry.IsDirectory)
+                    {
+                        elTexto += reader.Entry.FilePath + "\n";
+                        Cantidad++;
+                    }
                 }
-
-                LOG = CadenaRwActivo;
             }
-            catch (System.Exception ex)
-            {
-                LOG = "Error " + ex.Message;
-                SistemaSonidos.instancia.PlayError();
-            }
-        }
+            break;
     }
 
-    public void SalvarHome()
-    {
-        PlayerPrefs.SetInt("Nivel", Nivel);
-        PlayerPrefs.SetString("Home", txtCamino.text);
-        PlayerPrefs.Save();
+    PanelDescompactador.GetComponentInChildren<Slider>().maxValue = Cantidad;
 
-        LOG = CadenaHomeSalvado;
+    // mostrar en texto
+    PanelDescompactador.GetComponentInChildren<Text>().text = elTexto;
+    Canvas.ForceUpdateCanvases();
+
+    if (PanelDescompactador.GetComponentInChildren<Scrollbar>().size == 1)
+    {
+        PanelDescompactador.GetComponentInChildren<Scrollbar>().value = 0;
     }
-
-    // descompactador
-    private void Descompactar(string tipo)
+    else
     {
-        PanelDescompactador.GetComponentInChildren<Slider>().value = 0;
-        EnEditorTexto = true;
-        
-        string elTexto = "";
-        int Cantidad = 0;
-        PanelDescompactador.gameObject.SetActive(true);
+        PanelDescompactador.GetComponentInChildren<Scrollbar>().value = 1;
+    }
+}
+
+IEnumerator DescompactarAccion(string tipo)
+{
+    bool Ok = false;
+    PanelDescompactador.transform.GetChild(1).GetComponentInChildren<Text>().text = CadenaEspere;
+    PanelDescompactador.transform.GetChild(1).GetComponent<Image>().enabled = false;
+    yield return null;
+
+    try
+    {
+        string destino = txtCamino.text + _s_ + Path.GetFileNameWithoutExtension(camino);
+        //string destino = @"F:\" + Path.GetFileNameWithoutExtension(camino);
+        if (!Directory.Exists(destino))
+            Directory.CreateDirectory(destino);
 
         switch (tipo)
         {
@@ -2981,12 +3100,26 @@ public class Controlador : MonoBehaviour {
                 using (Stream stream = File.OpenRead(camino))
                 using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
                 {
+                    int Valor = 0;
                     while (reader.MoveToNextEntry())
                     {
-                        if (!reader.Entry.IsDirectory)
+                        if (reader.Entry.IsDirectory)
                         {
-                            elTexto += reader.Entry.FilePath + "\n";
-                            Cantidad++;
+                            Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
+                        }
+                        else
+                        {
+                            if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
+                            }
+                            using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
+                            {
+                                reader.WriteEntryTo(newStream);
+                                Valor++;
+                                PanelDescompactador.GetComponentInChildren<Slider>().value = Valor;
+                                yield return null;
+                            }
                         }
                     }
                 }
@@ -2995,12 +3128,26 @@ public class Controlador : MonoBehaviour {
                 using (Stream stream = File.OpenRead(camino))
                 using (var reader = SharpCompress.Reader.Rar.RarReader.Open(stream))
                 {
+                    int Valor = 0;
                     while (reader.MoveToNextEntry())
                     {
-                        if (!reader.Entry.IsDirectory)
+                        if (reader.Entry.IsDirectory)
                         {
-                            elTexto += reader.Entry.FilePath + "\n";
-                            Cantidad++;
+                            Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
+                        }
+                        else
+                        {
+                            if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
+                            }
+                            using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
+                            {
+                                reader.WriteEntryTo(newStream);
+                                Valor++;
+                                PanelDescompactador.GetComponentInChildren<Slider>().value = Valor;
+                                yield return null;
+                            }
                         }
                     }
                 }
@@ -3009,808 +3156,704 @@ public class Controlador : MonoBehaviour {
                 using (Stream stream = File.OpenRead(camino))
                 using (var reader = SharpCompress.Reader.Tar.TarReader.Open(stream))
                 {
+                    int Valor = 0;
                     while (reader.MoveToNextEntry())
                     {
-                        if (!reader.Entry.IsDirectory)
+                        if (reader.Entry.IsDirectory)
                         {
-                            elTexto += reader.Entry.FilePath + "\n";
-                            Cantidad++;
+                            Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
+                        }
+                        else
+                        {
+                            if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
+                            }
+                            using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
+                            {
+                                reader.WriteEntryTo(newStream);
+                                Valor++;
+                                PanelDescompactador.GetComponentInChildren<Slider>().value = Valor;
+                                yield return null;
+                            }
                         }
                     }
                 }
                 break;
         }
 
-        PanelDescompactador.GetComponentInChildren<Slider>().maxValue = Cantidad;
-
-        // mostrar en texto
-        PanelDescompactador.GetComponentInChildren<Text>().text = elTexto;
-        Canvas.ForceUpdateCanvases();
-
-        if (PanelDescompactador.GetComponentInChildren<Scrollbar>().size == 1)
+        Ok = true;
+    }
+    finally
+    {
+        if (!Ok)
         {
-            PanelDescompactador.GetComponentInChildren<Scrollbar>().value = 0;
+            LOG = "Error !";
+            SistemaSonidos.instancia.PlayError();
         }
         else
         {
-            PanelDescompactador.GetComponentInChildren<Scrollbar>().value = 1;
-        }
-    }
-
-    IEnumerator DescompactarAccion(string tipo)
-    {
-        bool Ok = false;
-        PanelDescompactador.transform.GetChild(1).GetComponentInChildren<Text>().text = CadenaEspere;
-        PanelDescompactador.transform.GetChild(1).GetComponent<Image>().enabled = false;
-        yield return null;
-
-        try
-        {
-            string destino = txtCamino.text + _s_ + Path.GetFileNameWithoutExtension(camino);
-            //string destino = @"F:\" + Path.GetFileNameWithoutExtension(camino);
-            if (!Directory.Exists(destino))
-                Directory.CreateDirectory(destino);
-
-            switch (tipo)
-            {
-                case ".zip":
-                    using (Stream stream = File.OpenRead(camino))
-                    using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
-                    {
-                        int Valor = 0;
-                        while (reader.MoveToNextEntry())
-                        {
-                            if (reader.Entry.IsDirectory)
-                            {
-                                Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
-                            }
-                            else
-                            {
-                                if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
-                                {
-                                    Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
-                                }
-                                using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
-                                {
-                                    reader.WriteEntryTo(newStream);
-                                    Valor++;
-                                    PanelDescompactador.GetComponentInChildren<Slider>().value = Valor;
-                                    yield return null;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case ".rar":
-                    using (Stream stream = File.OpenRead(camino))
-                    using (var reader = SharpCompress.Reader.Rar.RarReader.Open(stream))
-                    {
-                        int Valor = 0;
-                        while (reader.MoveToNextEntry())
-                        {
-                            if (reader.Entry.IsDirectory)
-                            {
-                                Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
-                            }
-                            else
-                            {
-                                if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
-                                {
-                                    Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
-                                }
-                                using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
-                                {
-                                    reader.WriteEntryTo(newStream);
-                                    Valor++;
-                                    PanelDescompactador.GetComponentInChildren<Slider>().value = Valor;
-                                    yield return null;
-                                }
-                            }
-                        }
-                    }
-                    break;
-                case ".tar":
-                    using (Stream stream = File.OpenRead(camino))
-                    using (var reader = SharpCompress.Reader.Tar.TarReader.Open(stream))
-                    {
-                        int Valor = 0;
-                        while (reader.MoveToNextEntry())
-                        {
-                            if (reader.Entry.IsDirectory)
-                            {
-                                Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
-                            }
-                            else
-                            {
-                                if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
-                                {
-                                    Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
-                                }
-                                using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
-                                {
-                                    reader.WriteEntryTo(newStream);
-                                    Valor++;
-                                    PanelDescompactador.GetComponentInChildren<Slider>().value = Valor;
-                                    yield return null;
-                                }
-                            }
-                        }
-                    }
-                    break;
-            }
-            
-            Ok = true;
-        }
-        finally
-        {
-            if (!Ok)
-            {
-                LOG = "Error !";
-                SistemaSonidos.instancia.PlayError();
-            }
-            else
-            {
-                SistemaSonidos.instancia.PlayFinalizoCopia();
-            }
-
-            EnEditorTexto = false;
-            PanelDescompactador.gameObject.SetActive(false);
-            PanelDescompactador.transform.GetChild(1).GetComponentInChildren<Text>().text = CadenaExtraer;
-            PanelDescompactador.transform.GetChild(1).GetComponent<Image>().enabled = true;
-            Extrayendo = false;
-
-            camino = txtCamino.text;
-            LimpiarTodo();
-            CrearDirectorio();
-        }        
-    }
-
-    private void DescompactarTema(string fichero_tema)
-    {
-        string destino = "/data/PS4Xplorer_Theme/";
-        
-        if (!Directory.Exists(destino))
-            Directory.CreateDirectory(destino);
-
-        // eliminar todo lo q este dentro de la carpeta
-        string[] ficheros = Directory.GetFileSystemEntries(destino);
-        foreach (string fichero in ficheros)
-            File.Delete(fichero);
-
-        // descompactar
-        using (Stream stream = File.OpenRead(fichero_tema))
-        using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
-        {
-            while (reader.MoveToNextEntry())
-            {
-                if (reader.Entry.IsDirectory)
-                {
-                    Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
-                }
-                else
-                {
-                    if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
-                    {
-                        Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
-                    }
-                    using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
-                    {
-                        reader.WriteEntryTo(newStream);
-                    }
-                }
-            }
+            SistemaSonidos.instancia.PlayFinalizoCopia();
         }
 
-        ResetearIconos();
-        CargarTema();
+        EnEditorTexto = false;
+        PanelDescompactador.gameObject.SetActive(false);
+        PanelDescompactador.transform.GetChild(1).GetComponentInChildren<Text>().text = CadenaExtraer;
+        PanelDescompactador.transform.GetChild(1).GetComponent<Image>().enabled = true;
+        Extrayendo = false;
 
         camino = txtCamino.text;
         LimpiarTodo();
         CrearDirectorio();
     }
+}
 
-    public void DescompactarAvatar(string fichero_avatar, string Destino)
+private void DescompactarTema(string fichero_tema)
+{
+    string destino = "/data/PS4Xplorer_Theme/";
+
+    if (!Directory.Exists(destino))
+        Directory.CreateDirectory(destino);
+
+    // eliminar todo lo q este dentro de la carpeta
+    string[] ficheros = Directory.GetFileSystemEntries(destino);
+    foreach (string fichero in ficheros)
+        File.Delete(fichero);
+
+    // descompactar
+    using (Stream stream = File.OpenRead(fichero_tema))
+    using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
     {
-        string destino = Destino;
-
-        if (Destino == "")
+        while (reader.MoveToNextEntry())
         {
-            string[] MisProfiles = Directory.GetFileSystemEntries("/system_data/priv/cache/profile/");
-            if (MisProfiles.Length > 1)
+            if (reader.Entry.IsDirectory)
             {
-                EnEditorTexto = true;
-                PanelSelecionUsuario.SetActive(true);
-                return;
+                Directory.CreateDirectory(destino + _s_ + reader.Entry.FilePath);
             }
             else
             {
-                if (Directory.Exists(MisProfiles[0]))
+                if (!Directory.Exists(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath)))
                 {
-                    destino = MisProfiles[0];
+                    Directory.CreateDirectory(Path.GetDirectoryName(destino + _s_ + reader.Entry.FilePath));
+                }
+                using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
+                {
+                    reader.WriteEntryTo(newStream);
                 }
             }
+        }
+    }
+
+    ResetearIconos();
+    CargarTema();
+
+    camino = txtCamino.text;
+    LimpiarTodo();
+    CrearDirectorio();
+}
+
+public void DescompactarAvatar(string fichero_avatar, string Destino)
+{
+    string destino = Destino;
+
+    if (Destino == "")
+    {
+        string[] MisProfiles = Directory.GetFileSystemEntries("/system_data/priv/cache/profile/");
+        if (MisProfiles.Length > 1)
+        {
+            EnEditorTexto = true;
+            PanelSelecionUsuario.SetActive(true);
+            return;
         }
         else
         {
-            EnEditorTexto = false;
-            PanelSelecionUsuario.SetActive(false);
-
-            string[] MisProfiles = Directory.GetFileSystemEntries("/system_data/priv/cache/profile/");
-            foreach (string carpeta in MisProfiles)
+            if (Directory.Exists(MisProfiles[0]))
             {
-                if (carpeta.IndexOf(Destino) > 0)
-                {
-                    destino = carpeta;
-                }
+                destino = MisProfiles[0];
             }
+        }
+    }
+    else
+    {
+        EnEditorTexto = false;
+        PanelSelecionUsuario.SetActive(false);
 
-            fichero_avatar = camino;
+        string[] MisProfiles = Directory.GetFileSystemEntries("/system_data/priv/cache/profile/");
+        foreach (string carpeta in MisProfiles)
+        {
+            if (carpeta.IndexOf(Destino) > 0)
+            {
+                destino = carpeta;
+            }
         }
 
-        if (destino != "")
+        fichero_avatar = camino;
+    }
+
+    if (destino != "")
+    {
+        // descompactar
+        try
         {
-            // descompactar
-            try
+            if (Directory.Exists(destino))
             {
-                if (Directory.Exists(destino))
+                using (Stream stream = File.OpenRead(fichero_avatar))
+                using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
                 {
-                    using (Stream stream = File.OpenRead(fichero_avatar))
-                    using (var reader = SharpCompress.Reader.Zip.ZipReader.Open(stream))
+                    while (reader.MoveToNextEntry())
                     {
-                        while (reader.MoveToNextEntry())
+                        if (File.Exists(destino + _s_ + reader.Entry.FilePath))
                         {
-                            if (File.Exists(destino + _s_ + reader.Entry.FilePath))
-                            {
-                                File.Delete(destino + _s_ + reader.Entry.FilePath);
-                            }
-                            using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
-                            {
-                                reader.WriteEntryTo(newStream);
-                            }
+                            File.Delete(destino + _s_ + reader.Entry.FilePath);
+                        }
+                        using (Stream newStream = File.Create(destino + _s_ + reader.Entry.FilePath))
+                        {
+                            reader.WriteEntryTo(newStream);
                         }
                     }
-
-                    LOG = CadenaAvatarInstalado;
-                    SistemaSonidos.instancia.PlayFinalizoCopia();
                 }
-            }
-            catch (System.Exception ex)
-            {
-                LOG = "Error " + ex.Message;
-                SistemaSonidos.instancia.PlayError();
+
+                LOG = CadenaAvatarInstalado;
+                SistemaSonidos.instancia.PlayFinalizoCopia();
             }
         }
-    }
-
-    private void ResetearIconos()
-    {
-        carpetasPrefab.GetComponent<Image>().sprite = carpetasPrefab_Spr;
-        carpetasPrefabEspecial.GetComponent<Image>().sprite = carpetasPrefabEspecial_Spr;
-        carpetasPrefabBlackList.GetComponent<Image>().sprite = carpetasPrefabBlackList_Spr;
-        ficherosPrefab.GetComponent<Image>().sprite = ficherosPrefab_Spr;
-        ficherosPrefabFOT.GetComponent<Image>().sprite = ficherosPrefabFOT_Spr;
-        ficherosPrefabMP3.GetComponent<Image>().sprite = ficherosPrefabMP3_Spr;
-        ficherosPrefabMP4.GetComponent<Image>().sprite = ficherosPrefabMP4_Spr;
-        ficherosPrefabTXT.GetComponent<Image>().sprite = ficherosPrefabTXT_Spr;
-        ficherosPrefabTHEME.GetComponent<Image>().sprite = ficherosPrefabTHEME_Spr;
-        ficherosPrefabRAR.GetComponent<Image>().sprite = ficherosPrefabRAR_Spr;
-        ficherosPrefabPKG.GetComponent<Image>().sprite = ficherosPrefabPKG_Spr;
-        ficherosPrefabSFO.GetComponent<Image>().sprite = ficherosPrefabSFO_Spr;
-        ficherosPrefabAVATAR.GetComponent<Image>().sprite = ficherosPrefabAVATAR_Spr;
-        textoOptions.GetComponentInParent<Image>().sprite = IconoOpciones;
-
-        PanelOpciones.transform.GetChild(0).GetComponent<Image>().sprite = carpetasPrefab_Spr;
-        PanelOpciones.transform.GetChild(1).GetComponent<Image>().sprite = ficherosPrefabTXT_Spr;
-
-        PanelOpciones.transform.GetChild(3).GetComponent<Image>().sprite = IconoCortar;
-        PanelOpciones.transform.GetChild(4).GetComponent<Image>().sprite = IconoCopiar;
-        PanelOpciones.transform.GetChild(5).GetComponent<Image>().sprite = IconoPegar;
-        PanelOpciones.transform.GetChild(6).GetComponent<Image>().sprite = IconoRenombrar;
-        PanelOpciones.transform.GetChild(7).GetComponent<Image>().sprite = IconoEliminar;
-
-        PanelOpcionesAvanzadas.transform.GetChild(1).GetComponent<Image>().sprite = IconoFTP;
-        PanelOpcionesAvanzadas.transform.GetChild(2).GetComponent<Image>().sprite = IconoRW;
-        PanelOpcionesAvanzadas.transform.GetChild(3).GetComponent<Image>().sprite = IconoHOME;
-
-        PanelCopiando.transform.GetChild(0).GetComponent<Image>().sprite = IconoPegar;
-        PanelCopiando.transform.GetChild(4).GetComponent<Image>().sprite = IconoCuadrado;
-
-        PanelMensaje.GetComponent<Image>().sprite = ImagenDefectoOverwrite;
-
-        PanelDescompactador.transform.GetChild(1).GetComponent<Image>().sprite = IconoCuadrado;
-    }
-
-    private void CargarTema()
-    {
-        string CaminoTemas = "/data/PS4Xplorer_Theme/";
-
-        if (File.Exists(CaminoTemas + _s_ + "theme"))
+        catch (System.Exception ex)
         {
-            StreamReader sr = new StreamReader(CaminoTemas + _s_ + "theme");
-            Color c = new Color();
-
-            // Main Windows.....................................
-            // Color del BG
-            string Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Ventanas_BG = c;
-
-            // Color del INTERIOR
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Ventanas_IN = c;
-
-            // Color de las Fonts fondo
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color FuenteBG = c;
-
-            // Color de las Fonts interior
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color FuenteIN = c;
-
-            // Color de la barra de selecion
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Barra_Selector = c;
-            
-            // Color de la barra de marca multiselecion
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Barra_Selector2 = c;
-
-            // Color de las Opciones
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Opciones_Color = c;
-
-            // Color de las Fonts de las Opciones
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Opciones_Fuentes = c;
-
-            // Color de la barra de selecion de las Opciones
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color Opciones_Selector = c;
-
-            // Color de las Opciones Avanzadas
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color OpcionesAvanzadas_Color = c;
-
-            // Color de las Fonts de las Opciones Avanzadas
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color OpcionesAvanzadas_Fuentes = c;
-
-            // Color de la barra de selecion de las Opciones Avanzadas
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color OpcionesAvanzadas_Selector = c;
-
-            // Color del Panel Copia y Pega
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color CopiaPegaColor = c;
-
-            // Color de la Font del Panel Copia y Pega
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color CopiaPegaColorFont = c;
-
-            // Color del BACK Progress Bar del Panel Copia y Pega
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color CopiaPegaProgressBarBACK = c;
-
-            // Color del FILL Progress Bar del Panel Copia y Pega
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color CopiaPegaProgressBarFILL = c;
-
-            // Color de la FONT Progress Bar del Panel Copia y Pega
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color CopiaPegaProgressBarFONT = c;
-
-            // Color de la FONT del Overwrite
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorFontOverwrite = c;
-
-            // Color de los Botones del Overwrite
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorBotonesOverwrite = c;
-
-            // Color de los Botones Selecionado del Overwrite
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorBotonSelecionadoOverwrite = c;
-
-            // Color de la FONT de los Botones del Overwrite
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorBotonesFontOverwrite = c;
-
-            // Color Panel textos
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelTextos = c;
-
-            // Color Panel textos Inside
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelTextosInside = c;
-
-            // Color Panel textos Fonts
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelTextosFont = c;
-
-            // Color Panel ZIP and RAR
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelZipRar = c;
-
-            // Color Panel ZIP and RAR Font
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelZipRarFont = c;
-
-            // Color Panel ZIP and RAR Inside
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelZipRarInside = c;
-
-            // Color Panel ZIP and RAR Inside Font
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelZipRarInsideFont = c;
-            
-            // Color Panel ZIP and RAR ProgressBar BACK
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelProgresBACK = c;
-            
-            // Color Panel ZIP and RAR ProgressBar FILL
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelProgresFILL = c;
-
-            // Color Panel PKG
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelPKG = c;
-
-            // Color Panel PKG Inside
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelPKG_Inside = c;
-
-            // Color Panel PKG Inside Font
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorPanelPKG_Font = c;
-
-            // Scroll Bar Main Windows BACK
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorScrollBarBACK_1 = c;
-
-            // Scroll Bar Main Windows HANDLE
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorScrollBarHANDLE_1 = c;
-
-            // Scroll Bar Textos BACK
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorScrollBarBACK_2 = c;
-
-            // Scroll Bar Textos HANDLE
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorScrollBarHANDLE_2 = c;
-
-            // Scroll Bar Zips BACK
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorScrollBarBACK_3 = c;
-
-            // Scroll Bar Zips HANDLE
-            Linea = sr.ReadLine();
-            ColorUtility.TryParseHtmlString(Linea, out c);
-            Color ColorScrollBarHANDLE_3 = c;
-            
-            sr.Close();
-
-            // GB Image
-            if (File.Exists(CaminoTemas + _s_ + "Background.png"))
-            {
-                ImagenFondo.sprite = LeeImagenTema(CaminoTemas + _s_ + "Background.png");
-            }
-            else
-            {
-                ImagenFondo.sprite = null;
-            }
-
-            // Inside Image
-            if (File.Exists(CaminoTemas + _s_ + "Inside.png"))
-            {
-                scrollRect.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Inside.png");
-            }
-            else
-            {
-                scrollRect.GetComponent<Image>().sprite = null;
-            }
-
-            // Overwrite Image
-            if (File.Exists(CaminoTemas + _s_ + "Overwrite.png"))
-            {
-                PanelMensaje.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Overwrite.png");
-            }
-            
-            // COLORES de la Main Windows
-            ImagenFondo.color = Ventanas_BG;
-            scrollRect.gameObject.GetComponent<Image>().color = Ventanas_IN;
-
-            txtCamino.color = FuenteBG;
-            txtTemperatura.color = FuenteBG;
-            txtCantidad.color = FuenteBG;
-            txtLog.color = FuenteBG;
-            textoOptions.color = FuenteBG;
-
-            //carpetasPrefab.GetComponentInChildren<Text>().color = FuenteIN;
-            carpetasPrefab.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            carpetasPrefab.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            carpetasPrefab.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            carpetasPrefab.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            //carpetasPrefabBlackList.GetComponentInChildren<Text>().color = FuenteIN;
-            carpetasPrefabBlackList.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            carpetasPrefabBlackList.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            carpetasPrefabBlackList.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            carpetasPrefabBlackList.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            //carpetasPrefabEspecial.GetComponentInChildren<Text>().color = FuenteIN;
-            carpetasPrefabEspecial.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            carpetasPrefabEspecial.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            carpetasPrefabEspecial.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            carpetasPrefabEspecial.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-
-            ficherosPrefab.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefab.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefab.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefab.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabMP3.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabMP3.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabMP3.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabMP3.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabMP4.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabMP4.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabMP4.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabMP4.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabFOT.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabFOT.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabFOT.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabFOT.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabTXT.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabTXT.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabTXT.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabTXT.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabSFO.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabSFO.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabSFO.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabSFO.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabPKG.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabPKG.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabPKG.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabPKG.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabRAR.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabRAR.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabRAR.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabRAR.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabTHEME.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabTHEME.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabTHEME.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabTHEME.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-            ficherosPrefabAVATAR.GetComponentsInChildren<Text>()[0].color = FuenteIN;
-            ficherosPrefabAVATAR.GetComponentsInChildren<Text>()[1].color = FuenteIN;
-            ficherosPrefabAVATAR.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
-            ficherosPrefabAVATAR.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
-
-            // COLORES de la Opciones
-            PanelOpciones.GetComponent<Image>().color = Opciones_Color;
-            PanelOpciones.transform.GetChild(0).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(1).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(2).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(3).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(4).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(5).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(6).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-            PanelOpciones.transform.GetChild(7).GetComponentInChildren<Text>().color = Opciones_Fuentes;
-
-            PanelOpciones.transform.GetChild(0).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(1).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(2).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(3).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(4).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(5).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(6).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-            PanelOpciones.transform.GetChild(7).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
-
-            // COLORES de las Opciones Avanzadas
-            PanelOpcionesAvanzadas.GetComponent<Image>().color = OpcionesAvanzadas_Color;
-            PanelOpcionesAvanzadas.transform.GetChild(0).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
-            PanelOpcionesAvanzadas.transform.GetChild(1).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
-            PanelOpcionesAvanzadas.transform.GetChild(2).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
-            PanelOpcionesAvanzadas.transform.GetChild(3).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
-
-            PanelOpcionesAvanzadas.transform.GetChild(1).transform.GetChild(0).GetComponent<Image>().color = OpcionesAvanzadas_Selector;
-            PanelOpcionesAvanzadas.transform.GetChild(2).transform.GetChild(0).GetComponent<Image>().color = OpcionesAvanzadas_Selector;
-            PanelOpcionesAvanzadas.transform.GetChild(3).transform.GetChild(0).GetComponent<Image>().color = OpcionesAvanzadas_Selector;
-
-            // COLORES del Panel Copia y Pega
-            PanelCopiando.GetComponent<Image>().color = CopiaPegaColor;
-            PanelCopiando.transform.GetChild(1).GetComponent<Text>().color = CopiaPegaColorFont;
-            PanelCopiando.transform.GetChild(4).GetComponentInChildren<Text>().color = CopiaPegaColorFont;
-            PanelCopiando.transform.GetChild(2).GetComponentInChildren<Image>().color = CopiaPegaProgressBarBACK;
-            PanelCopiando.transform.GetChild(2).transform.GetChild(1).GetComponentInChildren<Image>().color = CopiaPegaProgressBarFILL;
-            PanelCopiando.transform.GetChild(3).GetComponentInChildren<Image>().color = CopiaPegaProgressBarBACK;
-            PanelCopiando.transform.GetChild(3).transform.GetChild(1).GetComponentInChildren<Image>().color = CopiaPegaProgressBarFILL;
-            PanelCopiando.transform.GetChild(3).transform.GetChild(2).GetComponent<Text>().color = CopiaPegaProgressBarFONT;
-
-            // COLORES del Panel Overwirte
-            PanelMensaje.transform.GetChild(0).GetComponent<Text>().color = ColorFontOverwrite;
-            PanelMensaje.transform.GetChild(1).GetComponent<Text>().color = ColorFontOverwrite;
-            PanelMensaje.transform.GetChild(2).GetComponent<Text>().color = ColorFontOverwrite;
-
-            ColorBlock cb = new ColorBlock();
-            cb.normalColor = ColorBotonesOverwrite;
-            cb.highlightedColor = ColorBotonSelecionadoOverwrite;
-            cb.pressedColor = ColorBotonesOverwrite;
-            cb.disabledColor = ColorBotonesOverwrite;
-            cb.colorMultiplier = 1;
-            PanelMensaje.transform.GetChild(3).GetComponent<Button>().colors = cb;
-            PanelMensaje.transform.GetChild(4).GetComponent<Button>().colors = cb;
-            PanelMensaje.transform.GetChild(5).GetComponent<Button>().colors = cb;
-            PanelMensaje.transform.GetChild(6).GetComponent<Button>().colors = cb;
-            PanelMensaje.transform.GetChild(3).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
-            PanelMensaje.transform.GetChild(4).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
-            PanelMensaje.transform.GetChild(5).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
-            PanelMensaje.transform.GetChild(6).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
-
-            // COLORES del Panel Texto
-            PanelEditorTexto2.GetComponent<Image>().color = ColorPanelTextos;
-            PanelEditorTexto2.transform.GetChild(0).GetComponent<Image>().color = ColorPanelTextosInside;
-            PanelEditorTexto2.transform.GetChild(0).GetComponentInChildren<Text>().color = ColorPanelTextosFont;
-
-            // COLORES del Panel Descompactador
-            PanelDescompactador.GetComponent<Image>().color = ColorPanelZipRar;
-            PanelDescompactador.transform.GetChild(1).GetComponentInChildren<Text>().color = ColorPanelZipRarFont;
-            PanelDescompactador.transform.GetChild(0).GetComponent<Image>().color = ColorPanelZipRarInside;
-            PanelDescompactador.GetComponentInChildren<Text>().color = ColorPanelZipRarInsideFont;
-            PanelDescompactador.transform.GetChild(2).GetComponentInChildren<Image>().color = ColorPanelProgresBACK;
-            PanelDescompactador.transform.GetChild(2).transform.GetChild(1).GetComponentInChildren<Image>().color = ColorPanelProgresFILL;
-            
-            // COLORES del Panel PKG
-            PanelPKG.GetComponent<Image>().color = ColorPanelPKG;
-            PanelPKG.transform.GetChild(0).GetComponent<Image>().color = ColorPanelPKG_Inside;
-            PanelPKG.transform.GetChild(0).GetComponentInChildren<Text>().color = ColorPanelPKG_Font;
-            PanelPKG.transform.GetChild(2).GetComponent<Image>().color = ColorPanelPKG_Inside;
-            PanelPKG.transform.GetChild(2).GetComponentInChildren<Text>().color = ColorPanelPKG_Font;
-            PanelPKG.transform.GetChild(3).GetComponent<Image>().color = ColorPanelPKG_Inside;
-            PanelPKG.transform.GetChild(3).GetComponentInChildren<Text>().color = ColorPanelPKG_Font;
-
-            // COLORES del Scroll Bar de la Main Window
-            scrollRect.gameObject.transform.GetChild(2).GetComponent<Image>().color = ColorScrollBarBACK_1;
-            scrollRect.gameObject.transform.GetChild(2).transform.GetChild(0).GetComponentInChildren<Image>().color = ColorScrollBarHANDLE_1;
-
-            // COLORES del Scroll Bar del Panel de Textos
-            PanelEditorTexto1.transform.GetChild(0).transform.GetChild(1).GetComponent<Image>().color = ColorScrollBarBACK_2;
-            PanelEditorTexto1.transform.GetChild(0).transform.GetChild(1).transform.GetChild(0).GetComponentInChildren<Image>().color = ColorScrollBarHANDLE_2;
-
-            // COLORES del Scroll Bar del Panel Descompactador
-            PanelDescompactador.transform.GetChild(0).transform.GetChild(1).GetComponent<Image>().color = ColorScrollBarBACK_3;
-            PanelDescompactador.transform.GetChild(0).transform.GetChild(1).transform.GetChild(0).GetComponentInChildren<Image>().color = ColorScrollBarHANDLE_3;
-
-            // Iconos de la Main Windows
-            if (File.Exists(CaminoTemas + _s_ + "Icon1.png"))
-                carpetasPrefab.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon1.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon2.png"))
-                carpetasPrefabEspecial.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon2.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon3.png"))
-                carpetasPrefabBlackList.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon3.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon4.png"))
-                ficherosPrefab.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon4.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon5.png"))
-                ficherosPrefabFOT.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon5.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon6.png"))
-                ficherosPrefabMP3.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon6.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon7.png"))
-                ficherosPrefabMP4.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon7.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon8.png"))
-                ficherosPrefabTXT.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon8.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon9.png"))
-                ficherosPrefabTHEME.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon9.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon10.png"))
-                ficherosPrefabRAR.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon10.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon11.png"))
-                ficherosPrefabPKG.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon11.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon12.png"))
-                ficherosPrefabSFO.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon12.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon13.png"))
-                textoOptions.GetComponentInParent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon13.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon26.png"))
-                ficherosPrefabAVATAR.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon26.png");
-
-            // Iconos de las Opciones
-            if (File.Exists(CaminoTemas + _s_ + "Icon14.png"))
-                PanelOpciones.transform.GetChild(0).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon14.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon27.png"))
-                PanelOpciones.transform.GetChild(1).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon27.png");
-
-
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon15.png"))
-                PanelOpciones.transform.GetChild(3).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon15.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon16.png"))
-                PanelOpciones.transform.GetChild(4).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon16.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon17.png"))
-                PanelOpciones.transform.GetChild(5).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon17.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon18.png"))
-                PanelOpciones.transform.GetChild(6).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon18.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon19.png"))
-                PanelOpciones.transform.GetChild(7).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon19.png");
-
-            // Iconos de las Opciones Avanzadas
-            if (File.Exists(CaminoTemas + _s_ + "Icon20.png"))
-                PanelOpcionesAvanzadas.transform.GetChild(1).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon20.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon21.png"))
-                PanelOpcionesAvanzadas.transform.GetChild(2).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon21.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon22.png"))
-                PanelOpcionesAvanzadas.transform.GetChild(3).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon22.png");
-
-            // Iconos del Panel Copia y Pega
-            if (File.Exists(CaminoTemas + _s_ + "Icon23.png"))
-                PanelCopiando.transform.GetChild(0).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon23.png");
-
-            if (File.Exists(CaminoTemas + _s_ + "Icon24.png"))
-                PanelCopiando.transform.GetChild(4).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon24.png");
-
-            // Icono del Descompactador
-            if (File.Exists(CaminoTemas + _s_ + "Icon25.png"))
-                PanelDescompactador.transform.GetChild(1).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon25.png");
+            LOG = "Error " + ex.Message;
+            SistemaSonidos.instancia.PlayError();
         }
     }
+}
 
-    Sprite LeeImagenTema(string ImagenTema)
+private void ResetearIconos()
+{
+    carpetasPrefab.GetComponent<Image>().sprite = carpetasPrefab_Spr;
+    carpetasPrefabEspecial.GetComponent<Image>().sprite = carpetasPrefabEspecial_Spr;
+    carpetasPrefabBlackList.GetComponent<Image>().sprite = carpetasPrefabBlackList_Spr;
+    ficherosPrefab.GetComponent<Image>().sprite = ficherosPrefab_Spr;
+    ficherosPrefabFOT.GetComponent<Image>().sprite = ficherosPrefabFOT_Spr;
+    ficherosPrefabMP3.GetComponent<Image>().sprite = ficherosPrefabMP3_Spr;
+    ficherosPrefabMP4.GetComponent<Image>().sprite = ficherosPrefabMP4_Spr;
+    ficherosPrefabTXT.GetComponent<Image>().sprite = ficherosPrefabTXT_Spr;
+    ficherosPrefabTHEME.GetComponent<Image>().sprite = ficherosPrefabTHEME_Spr;
+    ficherosPrefabRAR.GetComponent<Image>().sprite = ficherosPrefabRAR_Spr;
+    ficherosPrefabPKG.GetComponent<Image>().sprite = ficherosPrefabPKG_Spr;
+    ficherosPrefabSFO.GetComponent<Image>().sprite = ficherosPrefabSFO_Spr;
+    ficherosPrefabAVATAR.GetComponent<Image>().sprite = ficherosPrefabAVATAR_Spr;
+    textoOptions.GetComponentInParent<Image>().sprite = IconoOpciones;
+
+    PanelOpciones.transform.GetChild(0).GetComponent<Image>().sprite = carpetasPrefab_Spr;
+    PanelOpciones.transform.GetChild(1).GetComponent<Image>().sprite = ficherosPrefabTXT_Spr;
+
+    PanelOpciones.transform.GetChild(3).GetComponent<Image>().sprite = IconoCortar;
+    PanelOpciones.transform.GetChild(4).GetComponent<Image>().sprite = IconoCopiar;
+    PanelOpciones.transform.GetChild(5).GetComponent<Image>().sprite = IconoPegar;
+    PanelOpciones.transform.GetChild(6).GetComponent<Image>().sprite = IconoRenombrar;
+    PanelOpciones.transform.GetChild(7).GetComponent<Image>().sprite = IconoEliminar;
+
+    PanelOpcionesAvanzadas.transform.GetChild(1).GetComponent<Image>().sprite = IconoFTP;
+    PanelOpcionesAvanzadas.transform.GetChild(2).GetComponent<Image>().sprite = IconoRW;
+    PanelOpcionesAvanzadas.transform.GetChild(3).GetComponent<Image>().sprite = IconoHOME;
+
+    PanelCopiando.transform.GetChild(0).GetComponent<Image>().sprite = IconoPegar;
+    PanelCopiando.transform.GetChild(4).GetComponent<Image>().sprite = IconoCuadrado;
+
+    PanelMensaje.GetComponent<Image>().sprite = ImagenDefectoOverwrite;
+
+    PanelDescompactador.transform.GetChild(1).GetComponent<Image>().sprite = IconoCuadrado;
+}
+
+private void CargarTema()
+{
+    string CaminoTemas = "/data/PS4Xplorer_Theme/";
+
+    if (File.Exists(CaminoTemas + _s_ + "theme"))
     {
-        byte[] bytes = File.ReadAllBytes(ImagenTema);
-        Texture2D texture = new Texture2D(0, 0, TextureFormat.RGB24, false);
-        texture.filterMode = FilterMode.Trilinear;
-        texture.LoadImage(bytes);
-        return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.0f, 0.0f), 1.0f);
+        StreamReader sr = new StreamReader(CaminoTemas + _s_ + "theme");
+        Color c = new Color();
+
+        // Main Windows.....................................
+        // Color del BG
+        string Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Ventanas_BG = c;
+
+        // Color del INTERIOR
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Ventanas_IN = c;
+
+        // Color de las Fonts fondo
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color FuenteBG = c;
+
+        // Color de las Fonts interior
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color FuenteIN = c;
+
+        // Color de la barra de selecion
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Barra_Selector = c;
+
+        // Color de la barra de marca multiselecion
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Barra_Selector2 = c;
+
+        // Color de las Opciones
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Opciones_Color = c;
+
+        // Color de las Fonts de las Opciones
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Opciones_Fuentes = c;
+
+        // Color de la barra de selecion de las Opciones
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color Opciones_Selector = c;
+
+        // Color de las Opciones Avanzadas
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color OpcionesAvanzadas_Color = c;
+
+        // Color de las Fonts de las Opciones Avanzadas
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color OpcionesAvanzadas_Fuentes = c;
+
+        // Color de la barra de selecion de las Opciones Avanzadas
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color OpcionesAvanzadas_Selector = c;
+
+        // Color del Panel Copia y Pega
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color CopiaPegaColor = c;
+
+        // Color de la Font del Panel Copia y Pega
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color CopiaPegaColorFont = c;
+
+        // Color del BACK Progress Bar del Panel Copia y Pega
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color CopiaPegaProgressBarBACK = c;
+
+        // Color del FILL Progress Bar del Panel Copia y Pega
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color CopiaPegaProgressBarFILL = c;
+
+        // Color de la FONT Progress Bar del Panel Copia y Pega
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color CopiaPegaProgressBarFONT = c;
+
+        // Color de la FONT del Overwrite
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorFontOverwrite = c;
+
+        // Color de los Botones del Overwrite
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorBotonesOverwrite = c;
+
+        // Color de los Botones Selecionado del Overwrite
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorBotonSelecionadoOverwrite = c;
+
+        // Color de la FONT de los Botones del Overwrite
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorBotonesFontOverwrite = c;
+
+        // Color Panel textos
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelTextos = c;
+
+        // Color Panel textos Inside
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelTextosInside = c;
+
+        // Color Panel textos Fonts
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelTextosFont = c;
+
+        // Color Panel ZIP and RAR
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelZipRar = c;
+
+        // Color Panel ZIP and RAR Font
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelZipRarFont = c;
+
+        // Color Panel ZIP and RAR Inside
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelZipRarInside = c;
+
+        // Color Panel ZIP and RAR Inside Font
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelZipRarInsideFont = c;
+
+        // Color Panel ZIP and RAR ProgressBar BACK
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelProgresBACK = c;
+
+        // Color Panel ZIP and RAR ProgressBar FILL
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelProgresFILL = c;
+
+        // Color Panel PKG
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelPKG = c;
+
+        // Color Panel PKG Inside
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelPKG_Inside = c;
+
+        // Color Panel PKG Inside Font
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorPanelPKG_Font = c;
+
+        // Scroll Bar Main Windows BACK
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorScrollBarBACK_1 = c;
+
+        // Scroll Bar Main Windows HANDLE
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorScrollBarHANDLE_1 = c;
+
+        // Scroll Bar Textos BACK
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorScrollBarBACK_2 = c;
+
+        // Scroll Bar Textos HANDLE
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorScrollBarHANDLE_2 = c;
+
+        // Scroll Bar Zips BACK
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorScrollBarBACK_3 = c;
+
+        // Scroll Bar Zips HANDLE
+        Linea = sr.ReadLine();
+        ColorUtility.TryParseHtmlString(Linea, out c);
+        Color ColorScrollBarHANDLE_3 = c;
+
+        sr.Close();
+
+        // GB Image
+        if (File.Exists(CaminoTemas + _s_ + "Background.png"))
+        {
+            ImagenFondo.sprite = LeeImagenTema(CaminoTemas + _s_ + "Background.png");
+        }
+        else
+        {
+            ImagenFondo.sprite = null;
+        }
+
+        // Inside Image
+        if (File.Exists(CaminoTemas + _s_ + "Inside.png"))
+        {
+            scrollRect.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Inside.png");
+        }
+        else
+        {
+            scrollRect.GetComponent<Image>().sprite = null;
+        }
+
+        // Overwrite Image
+        if (File.Exists(CaminoTemas + _s_ + "Overwrite.png"))
+        {
+            PanelMensaje.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Overwrite.png");
+        }
+
+        // COLORES de la Main Windows
+        ImagenFondo.color = Ventanas_BG;
+        scrollRect.gameObject.GetComponent<Image>().color = Ventanas_IN;
+
+        txtCamino.color = FuenteBG;
+        txtTemperatura.color = FuenteBG;
+        txtCantidad.color = FuenteBG;
+        txtLog.color = FuenteBG;
+        textoOptions.color = FuenteBG;
+
+        //carpetasPrefab.GetComponentInChildren<Text>().color = FuenteIN;
+        carpetasPrefab.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        carpetasPrefab.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        carpetasPrefab.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        carpetasPrefab.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        //carpetasPrefabBlackList.GetComponentInChildren<Text>().color = FuenteIN;
+        carpetasPrefabBlackList.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        carpetasPrefabBlackList.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        carpetasPrefabBlackList.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        carpetasPrefabBlackList.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        //carpetasPrefabEspecial.GetComponentInChildren<Text>().color = FuenteIN;
+        carpetasPrefabEspecial.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        carpetasPrefabEspecial.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        carpetasPrefabEspecial.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        carpetasPrefabEspecial.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+
+        ficherosPrefab.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefab.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefab.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefab.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabMP3.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabMP3.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabMP3.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabMP3.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabMP4.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabMP4.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabMP4.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabMP4.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabFOT.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabFOT.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabFOT.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabFOT.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabTXT.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabTXT.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabTXT.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabTXT.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabSFO.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabSFO.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabSFO.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabSFO.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabPKG.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabPKG.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabPKG.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabPKG.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabRAR.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabRAR.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabRAR.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabRAR.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabTHEME.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabTHEME.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabTHEME.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabTHEME.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+        ficherosPrefabAVATAR.GetComponentsInChildren<Text>()[0].color = FuenteIN;
+        ficherosPrefabAVATAR.GetComponentsInChildren<Text>()[1].color = FuenteIN;
+        ficherosPrefabAVATAR.transform.GetChild(0).GetComponent<Image>().color = Barra_Selector;
+        ficherosPrefabAVATAR.transform.GetChild(1).GetComponent<Image>().color = Barra_Selector2;
+
+        // COLORES de la Opciones
+        PanelOpciones.GetComponent<Image>().color = Opciones_Color;
+        PanelOpciones.transform.GetChild(0).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(1).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(2).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(3).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(4).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(5).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(6).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+        PanelOpciones.transform.GetChild(7).GetComponentInChildren<Text>().color = Opciones_Fuentes;
+
+        PanelOpciones.transform.GetChild(0).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(1).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(2).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(3).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(4).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(5).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(6).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+        PanelOpciones.transform.GetChild(7).transform.GetChild(0).GetComponent<Image>().color = Opciones_Selector;
+
+        // COLORES de las Opciones Avanzadas
+        PanelOpcionesAvanzadas.GetComponent<Image>().color = OpcionesAvanzadas_Color;
+        PanelOpcionesAvanzadas.transform.GetChild(0).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
+        PanelOpcionesAvanzadas.transform.GetChild(1).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
+        PanelOpcionesAvanzadas.transform.GetChild(2).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
+        PanelOpcionesAvanzadas.transform.GetChild(3).GetComponentInChildren<Text>().color = OpcionesAvanzadas_Fuentes;
+
+        PanelOpcionesAvanzadas.transform.GetChild(1).transform.GetChild(0).GetComponent<Image>().color = OpcionesAvanzadas_Selector;
+        PanelOpcionesAvanzadas.transform.GetChild(2).transform.GetChild(0).GetComponent<Image>().color = OpcionesAvanzadas_Selector;
+        PanelOpcionesAvanzadas.transform.GetChild(3).transform.GetChild(0).GetComponent<Image>().color = OpcionesAvanzadas_Selector;
+
+        // COLORES del Panel Copia y Pega
+        PanelCopiando.GetComponent<Image>().color = CopiaPegaColor;
+        PanelCopiando.transform.GetChild(1).GetComponent<Text>().color = CopiaPegaColorFont;
+        PanelCopiando.transform.GetChild(4).GetComponentInChildren<Text>().color = CopiaPegaColorFont;
+        PanelCopiando.transform.GetChild(2).GetComponentInChildren<Image>().color = CopiaPegaProgressBarBACK;
+        PanelCopiando.transform.GetChild(2).transform.GetChild(1).GetComponentInChildren<Image>().color = CopiaPegaProgressBarFILL;
+        PanelCopiando.transform.GetChild(3).GetComponentInChildren<Image>().color = CopiaPegaProgressBarBACK;
+        PanelCopiando.transform.GetChild(3).transform.GetChild(1).GetComponentInChildren<Image>().color = CopiaPegaProgressBarFILL;
+        PanelCopiando.transform.GetChild(3).transform.GetChild(2).GetComponent<Text>().color = CopiaPegaProgressBarFONT;
+
+        // COLORES del Panel Overwirte
+        PanelMensaje.transform.GetChild(0).GetComponent<Text>().color = ColorFontOverwrite;
+        PanelMensaje.transform.GetChild(1).GetComponent<Text>().color = ColorFontOverwrite;
+        PanelMensaje.transform.GetChild(2).GetComponent<Text>().color = ColorFontOverwrite;
+
+        ColorBlock cb = new ColorBlock();
+        cb.normalColor = ColorBotonesOverwrite;
+        cb.highlightedColor = ColorBotonSelecionadoOverwrite;
+        cb.pressedColor = ColorBotonesOverwrite;
+        cb.disabledColor = ColorBotonesOverwrite;
+        cb.colorMultiplier = 1;
+        PanelMensaje.transform.GetChild(3).GetComponent<Button>().colors = cb;
+        PanelMensaje.transform.GetChild(4).GetComponent<Button>().colors = cb;
+        PanelMensaje.transform.GetChild(5).GetComponent<Button>().colors = cb;
+        PanelMensaje.transform.GetChild(6).GetComponent<Button>().colors = cb;
+        PanelMensaje.transform.GetChild(3).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
+        PanelMensaje.transform.GetChild(4).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
+        PanelMensaje.transform.GetChild(5).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
+        PanelMensaje.transform.GetChild(6).GetComponentInChildren<Text>().color = ColorBotonesFontOverwrite;
+
+        // COLORES del Panel Texto
+        PanelEditorTexto2.GetComponent<Image>().color = ColorPanelTextos;
+        PanelEditorTexto2.transform.GetChild(0).GetComponent<Image>().color = ColorPanelTextosInside;
+        PanelEditorTexto2.transform.GetChild(0).GetComponentInChildren<Text>().color = ColorPanelTextosFont;
+
+        // COLORES del Panel Descompactador
+        PanelDescompactador.GetComponent<Image>().color = ColorPanelZipRar;
+        PanelDescompactador.transform.GetChild(1).GetComponentInChildren<Text>().color = ColorPanelZipRarFont;
+        PanelDescompactador.transform.GetChild(0).GetComponent<Image>().color = ColorPanelZipRarInside;
+        PanelDescompactador.GetComponentInChildren<Text>().color = ColorPanelZipRarInsideFont;
+        PanelDescompactador.transform.GetChild(2).GetComponentInChildren<Image>().color = ColorPanelProgresBACK;
+        PanelDescompactador.transform.GetChild(2).transform.GetChild(1).GetComponentInChildren<Image>().color = ColorPanelProgresFILL;
+
+        // COLORES del Panel PKG
+        PanelPKG.GetComponent<Image>().color = ColorPanelPKG;
+        PanelPKG.transform.GetChild(0).GetComponent<Image>().color = ColorPanelPKG_Inside;
+        PanelPKG.transform.GetChild(0).GetComponentInChildren<Text>().color = ColorPanelPKG_Font;
+        PanelPKG.transform.GetChild(2).GetComponent<Image>().color = ColorPanelPKG_Inside;
+        PanelPKG.transform.GetChild(2).GetComponentInChildren<Text>().color = ColorPanelPKG_Font;
+        PanelPKG.transform.GetChild(3).GetComponent<Image>().color = ColorPanelPKG_Inside;
+        PanelPKG.transform.GetChild(3).GetComponentInChildren<Text>().color = ColorPanelPKG_Font;
+
+        // COLORES del Scroll Bar de la Main Window
+        scrollRect.gameObject.transform.GetChild(2).GetComponent<Image>().color = ColorScrollBarBACK_1;
+        scrollRect.gameObject.transform.GetChild(2).transform.GetChild(0).GetComponentInChildren<Image>().color = ColorScrollBarHANDLE_1;
+
+        // COLORES del Scroll Bar del Panel de Textos
+        PanelEditorTexto1.transform.GetChild(0).transform.GetChild(1).GetComponent<Image>().color = ColorScrollBarBACK_2;
+        PanelEditorTexto1.transform.GetChild(0).transform.GetChild(1).transform.GetChild(0).GetComponentInChildren<Image>().color = ColorScrollBarHANDLE_2;
+
+        // COLORES del Scroll Bar del Panel Descompactador
+        PanelDescompactador.transform.GetChild(0).transform.GetChild(1).GetComponent<Image>().color = ColorScrollBarBACK_3;
+        PanelDescompactador.transform.GetChild(0).transform.GetChild(1).transform.GetChild(0).GetComponentInChildren<Image>().color = ColorScrollBarHANDLE_3;
+
+        // Iconos de la Main Windows
+        if (File.Exists(CaminoTemas + _s_ + "Icon1.png"))
+            carpetasPrefab.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon1.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon2.png"))
+            carpetasPrefabEspecial.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon2.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon3.png"))
+            carpetasPrefabBlackList.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon3.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon4.png"))
+            ficherosPrefab.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon4.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon5.png"))
+            ficherosPrefabFOT.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon5.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon6.png"))
+            ficherosPrefabMP3.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon6.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon7.png"))
+            ficherosPrefabMP4.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon7.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon8.png"))
+            ficherosPrefabTXT.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon8.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon9.png"))
+            ficherosPrefabTHEME.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon9.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon10.png"))
+            ficherosPrefabRAR.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon10.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon11.png"))
+            ficherosPrefabPKG.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon11.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon12.png"))
+            ficherosPrefabSFO.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon12.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon13.png"))
+            textoOptions.GetComponentInParent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon13.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon26.png"))
+            ficherosPrefabAVATAR.GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon26.png");
+
+        // Iconos de las Opciones
+        if (File.Exists(CaminoTemas + _s_ + "Icon14.png"))
+            PanelOpciones.transform.GetChild(0).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon14.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon27.png"))
+            PanelOpciones.transform.GetChild(1).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon27.png");
+
+
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon15.png"))
+            PanelOpciones.transform.GetChild(3).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon15.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon16.png"))
+            PanelOpciones.transform.GetChild(4).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon16.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon17.png"))
+            PanelOpciones.transform.GetChild(5).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon17.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon18.png"))
+            PanelOpciones.transform.GetChild(6).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon18.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon19.png"))
+            PanelOpciones.transform.GetChild(7).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon19.png");
+
+        // Iconos de las Opciones Avanzadas
+        if (File.Exists(CaminoTemas + _s_ + "Icon20.png"))
+            PanelOpcionesAvanzadas.transform.GetChild(1).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon20.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon21.png"))
+            PanelOpcionesAvanzadas.transform.GetChild(2).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon21.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon22.png"))
+            PanelOpcionesAvanzadas.transform.GetChild(3).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon22.png");
+
+        // Iconos del Panel Copia y Pega
+        if (File.Exists(CaminoTemas + _s_ + "Icon23.png"))
+            PanelCopiando.transform.GetChild(0).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon23.png");
+
+        if (File.Exists(CaminoTemas + _s_ + "Icon24.png"))
+            PanelCopiando.transform.GetChild(4).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon24.png");
+
+        // Icono del Descompactador
+        if (File.Exists(CaminoTemas + _s_ + "Icon25.png"))
+            PanelDescompactador.transform.GetChild(1).GetComponent<Image>().sprite = LeeImagenTema(CaminoTemas + _s_ + "Icon25.png");
     }
+}
+
+Sprite LeeImagenTema(string ImagenTema)
+{
+    byte[] bytes = File.ReadAllBytes(ImagenTema);
+    Texture2D texture = new Texture2D(0, 0, TextureFormat.RGB24, false);
+    texture.filterMode = FilterMode.Trilinear;
+    texture.LoadImage(bytes);
+    return Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.0f, 0.0f), 1.0f);
+}
 }

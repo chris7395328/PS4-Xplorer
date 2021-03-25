@@ -11,7 +11,7 @@ Summary:
     Generic Abstract Classes = 10
     Attributes = 225
   Total Field Removals = 1498
-  Total Method Removals = 14866
+  Total Method Removals = 14865
 ---------------------------------------------------
 ---------------------------------------------------
 Assembly: ArabicSupport
@@ -6696,7 +6696,7 @@ Summary:
     Generic Abstract Classes = 4
     Attributes = 0
   Total Field Removals = 274
-  Total Method Removals = 149
+  Total Method Removals = 148
   References Removed = 7
     BigInteger
     DotNetZip
@@ -7191,7 +7191,6 @@ Summary:
     PS4_Tools.PKG/SceneRelated/Unprotected_PKG
         get_Background()
         get_BuildDate()
-        get_Content_ID()
         get_Entires()
         get_Firmware_Version()
         get_Image()

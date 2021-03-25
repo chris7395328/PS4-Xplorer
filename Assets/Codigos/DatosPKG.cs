@@ -1,14 +1,23 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class DatosPKG : MonoBehaviour {
 
+
+    [DllImport("universal")]
+    private static extern int InstallPKG(string path, string name, string imgpath);
+    [DllImport("universal")]
+    private static extern int UnloadPKGModule();
+
     public Image PKGIcono;
     public Text Titulo;
     public Text TextoDetalle;
     public Text TituloID;
+
+    
 
     public void OnEnable()
     {
